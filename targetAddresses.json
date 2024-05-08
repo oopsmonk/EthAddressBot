@@ -1,0 +1,26 @@
+{
+  "target": [
+    {
+      "name": "ETCTest",
+      "address": "0x143b6765C06fB7b6dc2f5c2C29B8fC9d3ea21DFB"
+    },
+    {
+      "name": "ETCTest2",
+      "address": "0x3d095b917AD30D3CB7691D555E872A4159B69cac"
+    },
+    {
+      "name": "TestETC3",
+      "address": "0x7631Bf02524EAd8B6141c82349E49D0B3854bFe9"
+    }
+  ],
+  "alias": [
+    {
+      "name": "Jack-aka-ETC3",
+      "address": "0x7631Bf02524EAd8B6141c82349E49D0B3854bFe9"
+    },
+    {
+      "name": "Mark-aka-ETC2",
+      "address": "0x3d095b917AD30D3CB7691D555E872A4159B69cac"
+    }
+  ]
+}
