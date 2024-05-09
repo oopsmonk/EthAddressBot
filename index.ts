@@ -1,6 +1,7 @@
 import { Web3 } from "web3";
 import figlet from "figlet";
 import addrList from "./targetAddresses.json";
+import { type AddressList, type Transaction } from "./types";
 
 declare module "bun" {
   interface Env {
@@ -8,36 +9,25 @@ declare module "bun" {
   }
 }
 
-interface AddressList {
-  name: string;
-  address: string;
-}
-
-interface Transaction {
-  blockHash: string;
-  blockNumber: bigint;
-  from: string;
-  gas: bigint;
-  gasPrice: bigint;
-  hash: string;
-  input: string;
-  nonce: bigint;
-  to: string;
-  transactionIndex: bigint;
-  value: bigint;
-  type: bigint;
-  chainId: bigint;
-  v: bigint;
-  r: string;
-  s: string;
-}
-
-const targetList: AddressList[] = addrList.target;
-const aliasList: AddressList[] = addrList.alias;
+const targetList: AddressList[] = addrList;
 const rpc = Bun.env.RPC_PROVIDER;
 
+function isTragetAddressUnique(list: AddressList[]) {
+  const addressSet = new Set();
+
+  for (const item of list) {
+    if (addressSet.has(item.address)) {
+      return false; // Duplicate address found
+    } else {
+      addressSet.add(item.address);
+    }
+  }
+
+  return true;
+}
+
 function greeding(): boolean {
-  const welcome = figlet.textSync("* * Eth Address Logger * *");
+  const welcome = figlet.textSync("* * Eth Address Bot * *");
   console.log(welcome);
   console.log("Build with Bun v" + Bun.version);
   console.log("RPC Endpoint: " + rpc);
@@ -47,17 +37,17 @@ function greeding(): boolean {
     return false;
   }
 
+  if (!isTragetAddressUnique(targetList)) {
+    console.log("duplicate address found in the target list!");
+    return false;
+  }
+
   console.log("===== Monitoring Addresses =====");
   targetList.forEach((a) => {
     console.log(a.name + ": " + a.address);
   });
+  console.log("================================");
 
-  if (aliasList.length > 0) {
-    console.log("========== Alias List ==========");
-    aliasList.forEach((a) => {
-      console.log(a.name + ": " + a.address);
-    });
-  }
   return true;
 }
 
@@ -66,13 +56,10 @@ if (rpc != undefined) {
     const web3 = new Web3(new Web3.providers.HttpProvider(rpc));
     if (web3) {
       console.log("starting worker....");
-      // const blockWorker = new Worker(
-      //   new URL("latestBlockWorker.ts", import.meta.url).href
-      // );
-      const blockWorker = new Worker("./latestBlockWorker.ts");
+      const blockWorker = new Worker("./workerLatestBlock.ts");
 
       blockWorker.addEventListener("open", () => {
-        console.log("worker init");
+        console.log("LatestBlock worker init");
         blockWorker.postMessage({ nodeRPC: rpc });
       });
 
@@ -83,19 +70,18 @@ if (rpc != undefined) {
           blockWorker.postMessage({ start: true });
         } else if (event.data.txs) {
           const txs: Transaction[] = event.data.txs;
+
           console.log("txs: " + txs.length);
-          txs.forEach((tx) => {
-            console.log(
-              "value: " +
-                Web3.utils.fromWei(tx.value, "ether") +
-                " ether , from: " +
-                tx.from +
-                " , to: " +
-                tx.to +
-                " , hash: " +
-                tx.hash
-            );
+          const txWorker = new Worker("./workerTx.ts");
+
+          txWorker.addEventListener("open", () => {
+            // console.log("starting tx worker....");
+            txWorker.postMessage({ txs: txs });
           });
+
+          // txWorker.addEventListener("close", (event) => {
+          //   console.log("txWorker is being closed");
+          // });
         }
       });
     } else {

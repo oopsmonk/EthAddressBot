@@ -1,3 +1,5 @@
+// worker that polling latest block from RPC endpoint
+
 import Web3 from "web3";
 
 // prevents TS errors
@@ -5,6 +7,8 @@ declare var self: Worker;
 
 let web3: any = undefined;
 let latestBlock: bigint = 0n;
+const interval: number = 1000;
+
 self.addEventListener("message", async (event) => {
   if (event.data.nodeRPC) {
     web3 = new Web3(new Web3.providers.HttpProvider(event.data.nodeRPC));
@@ -26,7 +30,7 @@ self.addEventListener("message", async (event) => {
         console.log("new block: " + latestBlock);
         postMessage({ txs: block.transactions });
       }
-      Bun.sleepSync(2000);
+      Bun.sleepSync(interval);
     }
   }
 });

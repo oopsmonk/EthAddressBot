@@ -1,5 +1,5 @@
 {
-  "name": "ethaddresslogger",
+  "name": "ethaddressbot",
   "module": "index.ts",
   "type": "module",
   "scripts": {
