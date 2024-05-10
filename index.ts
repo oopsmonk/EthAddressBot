@@ -3,27 +3,24 @@ import figlet from "figlet";
 import addrList from "./targetAddresses.json";
 import { type AddressList, type Transaction } from "./types";
 
-declare module "bun" {
-  interface Env {
-    RPC_PROVIDER: string;
-  }
-}
-
-const targetList: AddressList[] = addrList;
+const targetList: AddressList[] = addrList.target;
+const aliasList: AddressList[] = addrList.alias;
 const rpc = Bun.env.RPC_PROVIDER;
 
 function isTragetAddressUnique(list: AddressList[]) {
   const addressSet = new Set();
+  let unique = true;
 
   for (const item of list) {
     if (addressSet.has(item.address)) {
-      return false; // Duplicate address found
+      console.log("duplicated address: " + item.address);
+      unique = false;
     } else {
       addressSet.add(item.address);
     }
   }
 
-  return true;
+  return unique;
 }
 
 function greeding(): boolean {
@@ -37,13 +34,17 @@ function greeding(): boolean {
     return false;
   }
 
-  if (!isTragetAddressUnique(targetList)) {
+  if (!isTragetAddressUnique(targetList.concat(aliasList))) {
     console.log("duplicate address found in the target list!");
     return false;
   }
 
   console.log("===== Monitoring Addresses =====");
   targetList.forEach((a) => {
+    console.log(a.name + ": " + a.address);
+  });
+  console.log("======= Alias Addresses ========");
+  aliasList.forEach((a) => {
     console.log(a.name + ": " + a.address);
   });
   console.log("================================");

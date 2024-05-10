@@ -5,11 +5,14 @@ import addrList from "./targetAddresses.json";
 // prevents TS errors
 declare var self: Worker;
 
-const interval: number = 2000;
-const targetList: AddressList[] = addrList;
+const targetList: AddressList[] = addrList.target;
+const aliasList: AddressList[] = addrList.alias;
 
 // compare addresses with lowercase
 targetList.forEach((t) => {
+  t.address = t.address.toLocaleLowerCase();
+});
+aliasList.forEach((t) => {
   t.address = t.address.toLocaleLowerCase();
 });
 
@@ -53,17 +56,20 @@ self.addEventListener("message", (event) => {
     for (let trgIdx = 0; trgIdx < targetList.length; trgIdx++) {
       const trg = targetList[trgIdx];
       if (tx.from === trg.address) {
-        const toTrg = targetList.find((item) => item.address === tx.to);
-        if (toTrg) {
+        const toAlias = aliasList.find((item) => item.address === tx.to);
+        if (toAlias) {
           // from target to a know address
-          txlogger(tx.value, trg.name, toTrg.name, tx.hash);
+          txlogger(tx.value, trg.name, toAlias.name, tx.hash);
         } else {
           // from target to unknow
           txlogger(tx.value, trg.name, tx.to, tx.hash);
         }
       } else if (tx.to === trg.address) {
-        const fromTrg = targetList.find((item) => item.address === tx.from);
-        if (!fromTrg) {
+        const fromAlias = aliasList.find((item) => item.address === tx.from);
+        if (fromAlias) {
+          // from alia to target
+          txlogger(tx.value, fromAlias.name, trg.name, tx.hash);
+        } else {
           // from unknow to target
           txlogger(tx.value, tx.from, trg.name, tx.hash);
         }

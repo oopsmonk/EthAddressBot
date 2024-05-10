@@ -1,3 +1,9 @@
+declare module "bun" {
+  interface Env {
+    RPC_PROVIDER: string;
+  }
+}
+
 export interface AddressList {
   name: string;
   address: string;
