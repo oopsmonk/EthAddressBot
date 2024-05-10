@@ -7,7 +7,7 @@ declare var self: Worker;
 
 let web3: any = undefined;
 let latestBlock: bigint = 0n;
-const interval: number = 1000;
+const interval: number = 3000;
 
 self.addEventListener("message", async (event) => {
   if (event.data.nodeRPC) {
@@ -26,6 +26,18 @@ self.addEventListener("message", async (event) => {
     while (true) {
       const block = await web3.eth.getBlock("latest", true);
       if (latestBlock != block.number) {
+        const diffBlockNum = block.number - latestBlock;
+        if (latestBlock !== 0n && diffBlockNum > 1) {
+          // TODO, handle missing blocks
+          console.warn(
+            "missed blocks: " +
+              diffBlockNum +
+              " , latest: " +
+              latestBlock +
+              " , current: " +
+              block.number
+          );
+        }
         latestBlock = block.number;
         console.log("new block: " + latestBlock);
         postMessage({ txs: block.transactions });
