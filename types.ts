@@ -1,6 +1,7 @@
 declare module "bun" {
   interface Env {
     RPC_PROVIDER: string;
+    LATEST_BLOCK_WORKER_INTERVAL: string;
   }
 }
 

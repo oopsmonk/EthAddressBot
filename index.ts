@@ -56,18 +56,18 @@ if (rpc != undefined) {
   if (greeding()) {
     const web3 = new Web3(new Web3.providers.HttpProvider(rpc));
     if (web3) {
-      console.log("starting worker....");
+      // console.log("starting worker....");
       const blockWorker = new Worker("./workerLatestBlock.ts");
 
       blockWorker.addEventListener("open", () => {
-        console.log("LatestBlock worker init");
+        console.log("LatestBlock worker init: " + rpc);
         blockWorker.postMessage({ nodeRPC: rpc });
       });
 
       // blockWorker.postMessage({ web3: web3 });
       blockWorker.addEventListener("message", (event) => {
         if (event.data.ready) {
-          console.log("worker ready to go!!");
+          console.log("latest block worker ready to go!!");
           blockWorker.postMessage({ start: true });
         } else if (event.data.txs) {
           const txs: Transaction[] = event.data.txs;
@@ -78,6 +78,11 @@ if (rpc != undefined) {
           txWorker.addEventListener("open", () => {
             // console.log("starting tx worker....");
             txWorker.postMessage({ txs: txs });
+          });
+
+          txWorker.addEventListener("message", (event) => {
+            const tx = event.data as Transaction;
+            console.log("logging tx: " + tx.hash);
           });
 
           // txWorker.addEventListener("close", (event) => {

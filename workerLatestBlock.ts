@@ -1,13 +1,12 @@
 // worker that polling latest block from RPC endpoint
-
 import Web3 from "web3";
+import { type Transaction } from "./types";
 
 // prevents TS errors
 declare var self: Worker;
 
 let web3: any = undefined;
 let latestBlock: bigint = 0n;
-const interval: number = 3000;
 
 self.addEventListener("message", async (event) => {
   if (event.data.nodeRPC) {
@@ -24,25 +23,41 @@ self.addEventListener("message", async (event) => {
       process.exit();
     }
     while (true) {
-      const block = await web3.eth.getBlock("latest", true);
-      if (latestBlock != block.number) {
-        const diffBlockNum = block.number - latestBlock;
-        if (latestBlock !== 0n && diffBlockNum > 1) {
-          // TODO, handle missing blocks
-          console.warn(
-            "missed blocks: " +
-              diffBlockNum +
-              " , latest: " +
+      await web3.eth.getBlockNumber().then(async (blockNum: bigint) => {
+        if (latestBlock === 0n) {
+          // frist block to handle
+          await web3.eth
+            .getBlock(blockNum, true)
+            .then((block: { transactions: Transaction[] }) => {
+              console.log("frist block: " + blockNum);
+              postMessage({ txs: block.transactions });
+            });
+        } else if (latestBlock != blockNum && latestBlock !== 0n) {
+          let diffBlockNum = blockNum - latestBlock;
+          console.log(
+            "latest: " +
               latestBlock +
               " , current: " +
-              block.number
+              blockNum +
+              " , diff:" +
+              diffBlockNum
           );
+          while (diffBlockNum) {
+            // get blocks detail
+            const n = blockNum - diffBlockNum + 1n;
+            await web3.eth
+              .getBlock(n, true)
+              .then((block: { transactions: Transaction[] }) => {
+                console.log("new block: " + n);
+                postMessage({ txs: block.transactions });
+              });
+            diffBlockNum--;
+          }
         }
-        latestBlock = block.number;
-        console.log("new block: " + latestBlock);
-        postMessage({ txs: block.transactions });
-      }
-      Bun.sleepSync(interval);
+        // update latest block number
+        latestBlock = blockNum;
+      });
+      Bun.sleepSync(Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL));
     }
   }
 });
