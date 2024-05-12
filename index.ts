@@ -54,6 +54,17 @@ function greeding(): boolean {
 
 if (rpc != undefined) {
   if (greeding()) {
+    // init db worker
+    const dbWorker = new Worker("./workerDB.ts");
+    dbWorker.addEventListener("open", () => {
+      dbWorker.postMessage({ create: true });
+    });
+
+    dbWorker.addEventListener("message", (event) => {
+      console.log("db msg: " + event.data);
+    });
+
+    // init latestblock worker
     const web3 = new Web3(new Web3.providers.HttpProvider(rpc));
     if (web3) {
       // console.log("starting worker....");
@@ -83,6 +94,7 @@ if (rpc != undefined) {
           txWorker.addEventListener("message", (event) => {
             const tx = event.data as Transaction;
             console.log("logging tx: " + tx.hash);
+            dbWorker.postMessage({ tx: tx });
           });
 
           // txWorker.addEventListener("close", (event) => {
