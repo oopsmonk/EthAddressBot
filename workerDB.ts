@@ -6,7 +6,7 @@ let db: Database;
 const dbFile: string = "./ledger.db";
 
 const txSchema = `CREATE TABLE IF NOT EXISTS txs (
-    blockHash TEXT type UNIQUE,
+    blockHash TEXT,
     blockNumber INTEGER,
     addrFrom TEXT,
     hash TEXT PRIMARY KEY,
@@ -17,7 +17,6 @@ const txSchema = `CREATE TABLE IF NOT EXISTS txs (
 );`;
 
 self.addEventListener("message", async (event) => {
-  console.log("db worker on msg: " + event.data);
   if (event.data.create) {
     console.log("create db: " + event.data.create);
     await access(dbFile, constants.W_OK)
@@ -32,22 +31,24 @@ self.addEventListener("message", async (event) => {
       });
 
     postMessage({ init: true });
-  } else if (event.data.tx) {
-    const tx = event.data.tx as Transaction;
-    console.log("added tx: " + tx.hash);
-    db.query(
-      `INSERT INTO txs (blockHash, blockNumber, addrFrom, hash, addrTo, transactionIndex, value, chainId) 
+  } else if (event.data.txs) {
+    const txs = event.data.txs as Transaction[];
+    for (const tx of txs) {
+      console.log("db add tx: " + tx.hash);
+      db.query(
+        `INSERT INTO txs (blockHash, blockNumber, addrFrom, hash, addrTo, transactionIndex, value, chainId) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?);`
-    ).run(
-      tx.blockHash,
-      tx.blockNumber,
-      tx.from,
-      tx.hash,
-      tx.to,
-      tx.transactionIndex,
-      tx.value,
-      tx.chainId
-    );
+      ).run(
+        tx.blockHash,
+        tx.blockNumber,
+        tx.from,
+        tx.hash,
+        tx.to,
+        tx.transactionIndex,
+        tx.value,
+        tx.chainId
+      );
+    }
   } else if (event.data.destroy) {
     db.close();
     process.exit();

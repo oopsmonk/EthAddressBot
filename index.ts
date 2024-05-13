@@ -1,4 +1,3 @@
-import { Web3 } from "web3";
 import figlet from "figlet";
 import addrList from "./targetAddresses.json";
 import { type AddressList, type Transaction } from "./types";
@@ -6,6 +5,12 @@ import { type AddressList, type Transaction } from "./types";
 const targetList: AddressList[] = addrList.target;
 const aliasList: AddressList[] = addrList.alias;
 const rpc = Bun.env.RPC_PROVIDER;
+
+let dbWorker: Worker;
+let blockWorker: Worker;
+
+let consoleLogger: Worker;
+// let lineBotLogger: Worker; // TODO
 
 function isTragetAddressUnique(list: AddressList[]) {
   const addressSet = new Set();
@@ -55,56 +60,68 @@ function greeding(): boolean {
 if (rpc != undefined) {
   if (greeding()) {
     // init db worker
-    const dbWorker = new Worker("./workerDB.ts");
+    dbWorker = new Worker("./workerDB.ts");
     dbWorker.addEventListener("open", () => {
       dbWorker.postMessage({ create: true });
     });
 
     dbWorker.addEventListener("message", (event) => {
-      console.log("db msg: " + event.data);
+      if (event.data.init) {
+        console.log("database is created...");
+      }
+    });
+
+    // console logger
+    // TODO: can be configured via env
+    consoleLogger = new Worker("./workerLoggerConsole.ts");
+    consoleLogger.addEventListener("open", () => {
+      console.log("console logger is ready");
     });
 
     // init latestblock worker
-    const web3 = new Web3(new Web3.providers.HttpProvider(rpc));
-    if (web3) {
-      // console.log("starting worker....");
-      const blockWorker = new Worker("./workerLatestBlock.ts");
+    blockWorker = new Worker("./workerLatestBlock.ts");
+    blockWorker.addEventListener("open", () => {
+      console.log("LatestBlock worker init: " + rpc);
+      blockWorker.postMessage({ nodeRPC: rpc });
+    });
 
-      blockWorker.addEventListener("open", () => {
-        console.log("LatestBlock worker init: " + rpc);
-        blockWorker.postMessage({ nodeRPC: rpc });
-      });
+    blockWorker.addEventListener("message", (event) => {
+      if (event.data.ready) {
+        console.log("latest block worker ready to go!!");
+        blockWorker.postMessage({ start: true });
+      } else if (event.data.txs) {
+        const txs: Transaction[] = event.data.txs;
+        console.log("block txs: " + txs.length);
+        const txWorker = new Worker("./workerTx.ts");
 
-      // blockWorker.postMessage({ web3: web3 });
-      blockWorker.addEventListener("message", (event) => {
-        if (event.data.ready) {
-          console.log("latest block worker ready to go!!");
-          blockWorker.postMessage({ start: true });
-        } else if (event.data.txs) {
-          const txs: Transaction[] = event.data.txs;
+        txWorker.addEventListener("open", () => {
+          // console.log("starting tx worker....");
+          txWorker.postMessage({ txs: txs });
+        });
 
-          console.log("txs: " + txs.length);
-          const txWorker = new Worker("./workerTx.ts");
+        txWorker.addEventListener("message", (event) => {
+          const loggedTxs = event.data as Transaction[];
+          console.log("txWorker logging txs: " + loggedTxs.length);
+          // TODO:
+          // handle logger or display, like db, lineBot, console
+          if (dbWorker) {
+            dbWorker.postMessage({ txs: loggedTxs });
+          }
+          if (consoleLogger) {
+            consoleLogger.postMessage({ txs: loggedTxs });
+          }
+          // TODO
+          // if (lineBotLogger) {
+          //   lineBotLogger.postMessage({ txs: loggedTxs });
+          // }
+        });
 
-          txWorker.addEventListener("open", () => {
-            // console.log("starting tx worker....");
-            txWorker.postMessage({ txs: txs });
-          });
-
-          txWorker.addEventListener("message", (event) => {
-            const tx = event.data as Transaction;
-            console.log("logging tx: " + tx.hash);
-            dbWorker.postMessage({ tx: tx });
-          });
-
-          // txWorker.addEventListener("close", (event) => {
-          //   console.log("txWorker is being closed");
-          // });
-        }
-      });
-    } else {
-      console.log("init web3 with endpoint failed: " + rpc);
-    }
+        // for debug
+        // txWorker.addEventListener("close", (event) => {
+        //   console.log("txWorker is being closed");
+        // });
+      }
+    });
   }
 } else {
   console.log("RPC_PROVIDER is not defined in .env file!");
