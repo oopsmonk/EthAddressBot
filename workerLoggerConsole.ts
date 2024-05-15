@@ -29,7 +29,7 @@ function txlogger(value: bigint, from: string, to: string, hash: string) {
 self.addEventListener("message", async (event) => {
   if (event.data.txs) {
     const txs = event.data.txs as Transaction[];
-    console.log("console logger [" + txs.length + "] txs:");
+    // console.log("console logger [" + txs.length + "] txs:");
     for (const tx of txs) {
       const fromTg = targetList.find((item) => item.address === tx.from);
       const fromAlias = aliasList.find((item) => item.address === tx.from);

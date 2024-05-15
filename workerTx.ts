@@ -17,19 +17,6 @@ aliasList.forEach((t) => {
   t.address = t.address.toLocaleLowerCase();
 });
 
-function txlogger(value: bigint, from: string, to: string, hash: string) {
-  console.log(
-    "value: " +
-      Web3.utils.fromWei(value, "ether") +
-      " ether , from: " +
-      from +
-      " , to: " +
-      to +
-      " , hash: " +
-      hash
-  );
-}
-
 self.addEventListener("message", (event) => {
   const txs: Transaction[] = event.data.txs;
   // compare addresses with lowercase
@@ -40,14 +27,14 @@ self.addEventListener("message", (event) => {
 
   for (const tx of txs) {
     // ignore zero tx
-    if (tx.value === 0n) {
-      console.log("ignore zero value tx: " + tx.hash);
+    if (tx.value === 0n && Bun.env.TX_IGNORE_ZERO === "1") {
+      // console.log("ignore zero value tx: " + tx.hash);
       continue;
     }
 
     // ignore self?
-    if (tx.from === tx.to) {
-      console.log("ignore from === to tx: " + tx.hash);
+    if (tx.from === tx.to && Bun.env.TX_IGNORE_SELF === "1") {
+      // console.log("ignore from === to tx: " + tx.hash);
       continue;
     }
 
@@ -72,7 +59,7 @@ self.addEventListener("message", (event) => {
 
   if (loggedTxs.length) {
     // dump txs for debug
-    // console.log("logged [" + loggedTxs.length + "]transactions: ");
+    console.log("txWorker logged [" + loggedTxs.length + "]transactions: ");
     // loggedTxs.forEach((tx) => console.log(tx.hash));
     postMessage(loggedTxs);
   }

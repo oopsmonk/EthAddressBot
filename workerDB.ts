@@ -18,14 +18,14 @@ const txSchema = `CREATE TABLE IF NOT EXISTS txs (
 
 self.addEventListener("message", async (event) => {
   if (event.data.create) {
-    console.log("create db: " + event.data.create);
+    // console.log("create db: " + event.data.create);
     await access(dbFile, constants.W_OK)
       .then(() => {
+        console.log("open db: " + dbFile);
         db = new Database(dbFile);
-        console.log("db exist");
       })
       .catch((err) => {
-        console.log("create db: " + err.message);
+        console.log("create db: " + dbFile);
         db = new Database(dbFile);
         db.run(txSchema);
       });
