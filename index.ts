@@ -63,13 +63,8 @@ function greeding(): boolean {
   console.log("==========Configure=============");
   console.log("RPC Endpoint: " + Bun.env.RPC_PROVIDER);
   console.log("LatestBlock interval: " + Bun.env.LATEST_BLOCK_WORKER_INTERVAL);
-  console.log(
-    "Ignore Zero transactions: " + String(Bun.env.TX_IGNORE_ZERO === "1")
-  );
-  console.log(
-    "Ignore `from` == `to` transactions: " +
-      String(Bun.env.TX_IGNORE_SELF === "1")
-  );
+  console.log("Ignore Zero transactions: " + String(Bun.env.TX_IGNORE_ZERO === "1"));
+  console.log("Ignore `from` == `to` transactions: " + String(Bun.env.TX_IGNORE_SELF === "1"));
   console.log("===== Monitoring Addresses =====");
   targetList.forEach((a) => {
     console.log(a.name + ": " + a.address);

@@ -26,31 +26,22 @@ self.addEventListener("message", async (event) => {
       await web3.eth.getBlockNumber().then(async (blockNum: bigint) => {
         if (latestBlock === 0n) {
           // frist block to handle
-          await web3.eth
-            .getBlock(blockNum, true)
-            .then((block: { transactions: Transaction[] }) => {
-              console.log("frist block: " + blockNum);
-              postMessage({ txs: block.transactions });
-            });
+          await web3.eth.getBlock(blockNum, true).then((block: { transactions: Transaction[] }) => {
+            console.log("frist block: " + blockNum);
+            postMessage({ txs: block.transactions });
+          });
         } else if (latestBlock != blockNum && latestBlock !== 0n) {
           let diffBlockNum = blockNum - latestBlock;
           console.log(
-            "latest: " +
-              latestBlock +
-              " , current: " +
-              blockNum +
-              " , diff:" +
-              diffBlockNum
+            "latest: " + latestBlock + " , current: " + blockNum + " , diff:" + diffBlockNum
           );
           while (diffBlockNum) {
             // get blocks detail
             const n = blockNum - diffBlockNum + 1n;
-            await web3.eth
-              .getBlock(n, true)
-              .then((block: { transactions: Transaction[] }) => {
-                console.log("new block: " + n);
-                postMessage({ txs: block.transactions });
-              });
+            await web3.eth.getBlock(n, true).then((block: { transactions: Transaction[] }) => {
+              console.log("new block: " + n);
+              postMessage({ txs: block.transactions });
+            });
             diffBlockNum--;
           }
         }
