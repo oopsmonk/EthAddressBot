@@ -4,6 +4,7 @@ declare module "bun" {
     LATEST_BLOCK_WORKER_INTERVAL: string;
     TX_IGNORE_ZERO: string;
     TX_IGNORE_SELF: string;
+    LATEST_BLOCK_NUMBER: string;
   }
 }
 

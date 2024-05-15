@@ -1,6 +1,7 @@
 import figlet from "figlet";
 import addrList from "./targetAddresses.json";
 import { type AddressList, type Transaction } from "./types";
+import Web3 from "web3";
 
 const targetList: AddressList[] = addrList.target;
 const aliasList: AddressList[] = addrList.alias;
@@ -49,6 +50,11 @@ function validateConfig(): boolean {
     return false;
   }
 
+  if (!Bun.env.LATEST_BLOCK_NUMBER && Bun.env.LATEST_BLOCK_NUMBER !== "0") {
+    console.log("LATEST_BLOCK_NUMBER is not defined in env file");
+    return false;
+  }
+
   return true;
 }
 
@@ -63,6 +69,10 @@ function greeding(): boolean {
   console.log("==========Configure=============");
   console.log("RPC Endpoint: " + Bun.env.RPC_PROVIDER);
   console.log("LatestBlock interval: " + Bun.env.LATEST_BLOCK_WORKER_INTERVAL);
+  console.log(
+    "Starting Block Number: " +
+      (Bun.env.LATEST_BLOCK_NUMBER === "0" ? "latest" : Bun.env.LATEST_BLOCK_NUMBER)
+  );
   console.log("Ignore Zero transactions: " + String(Bun.env.TX_IGNORE_ZERO === "1"));
   console.log("Ignore `from` == `to` transactions: " + String(Bun.env.TX_IGNORE_SELF === "1"));
   console.log("===== Monitoring Addresses =====");
@@ -79,10 +89,14 @@ function greeding(): boolean {
 }
 
 if (greeding()) {
+  // get network info
+  const web3 = new Web3(new Web3.providers.HttpProvider(rpc));
+  const id = await web3.eth.getChainId();
+  console.log("Network chainId: " + id);
   // init db worker
   dbWorker = new Worker("./workerDB.ts");
   dbWorker.addEventListener("open", () => {
-    dbWorker.postMessage({ create: true });
+    dbWorker.postMessage({ create: id });
   });
 
   dbWorker.addEventListener("message", (event) => {
@@ -108,6 +122,12 @@ if (greeding()) {
   blockWorker.addEventListener("message", (event) => {
     if (event.data.ready) {
       console.log("latest block worker ready to go!!");
+      blockWorker.postMessage({ start: true });
+    } else if (event.data.done) {
+      console.log("blockWorker finished: " + event.data.done);
+      const blockNum: bigint = event.data.done;
+      // update latest block in db
+      dbWorker.postMessage({ updateLatestBlockNumber: { chainId: id, latestNum: blockNum } });
       blockWorker.postMessage({ start: true });
     } else if (event.data.txs) {
       const txs: Transaction[] = event.data.txs;
