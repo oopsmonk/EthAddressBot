@@ -84,23 +84,31 @@ const textEventHandler = async (
       ],
     });
   } else if (event.message.text === "help") {
+    let text = "";
+    text = text.concat("\\alias - List of Known Addresses\n");
+    text = text.concat("\\config - Current Settings\n");
+    text = text.concat("\\history- Trasaction History\n");
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
         {
           type: "text",
-          text: "\\alias - 列出地址清單\n\\config - 目前設定",
+          text: text,
         },
       ],
     });
   } else if (event.message.text === "\\config") {
     const web3 = new Web3(new Web3.providers.HttpProvider(Bun.env.RPC_PROVIDER));
     const networkBlock = await web3.eth.getBlockNumber();
+    const chainId = await web3.eth.getChainId();
     let config = `RPC endpoint:\n${Bun.env.RPC_PROVIDER}\n`;
+    config = config.concat(`Chain ID: ${chainId}\n`);
     config = config.concat(`Network Block Number: ${networkBlock}\n`);
     config = config.concat(
       `Block Interval: ${Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL) / 1000}s`
     );
+    config = config.concat(`Explorer: ${Bun.env.TX_HASH_URL}\n`);
+    config = config.concat(`DB File: ${Bun.env.DB_FILE}\n`);
 
     await client.replyMessage({
       replyToken: event.replyToken,
