@@ -14,16 +14,8 @@ aliasList.forEach((t) => {
 });
 
 function txlogger(value: bigint, from: string, to: string, hash: string) {
-  console.log(
-    "value: " +
-      Web3.utils.fromWei(value, "ether") +
-      " ether , from: " +
-      from +
-      " , to: " +
-      to +
-      " , hash: " +
-      hash
-  );
+  const ether = Web3.utils.fromWei(value, "ether");
+  console.log(`value: ${ether} , from: ${from}, to: ${to}\n${Bun.env.TX_HASH_URL}${hash}`);
 }
 
 self.addEventListener("message", async (event) => {

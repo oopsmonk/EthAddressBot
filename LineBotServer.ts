@@ -128,7 +128,7 @@ const textEventHandler = async (
 
 function tx2Text(value: bigint, from: string, to: string, hash: string): string {
   const ether = Web3.utils.fromWei(value, "ether");
-  return `from: ${from}\nto: ${to}\nvalue:${ether}\nhash:\n${hash}\n===\n`;
+  return `from: ${from}\nto: ${to}\nvalue:${ether}\n${Bun.env.TX_HASH_URL}${hash}\n===\n`;
 }
 
 export function sendTxLog(txs: Transaction[]) {
