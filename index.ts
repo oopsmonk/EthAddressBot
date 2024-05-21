@@ -2,6 +2,7 @@ import figlet from "figlet";
 import addrList from "./targetAddresses.json";
 import { type AddressList, type Transaction } from "./types";
 import Web3 from "web3";
+import { startServer, sendTxLog } from "./LineBotServer";
 
 const targetList: AddressList[] = addrList.target;
 const aliasList: AddressList[] = addrList.alias;
@@ -12,6 +13,7 @@ let blockWorker: Worker;
 
 let consoleLogger: Worker;
 // let lineBotLogger: Worker; // TODO
+let isBotEnabled: boolean = false;
 
 function isTragetAddressUnique(list: AddressList[]) {
   const addressSet = new Set();
@@ -85,6 +87,14 @@ function greeding(): boolean {
   });
   console.log("================================");
 
+  if (Bun.env.LINE_USERS || Bun.env.LINE_USERS) {
+    console.log("LineBot is starting...");
+    startServer();
+    isBotEnabled = true;
+  } else {
+    console.log("LineBot is disabled...");
+    isBotEnabled = false;
+  }
   return true;
 }
 
@@ -150,10 +160,11 @@ if (greeding()) {
         if (consoleLogger) {
           consoleLogger.postMessage({ txs: loggedTxs });
         }
-        // TODO
-        // if (lineBotLogger) {
-        //   lineBotLogger.postMessage({ txs: loggedTxs });
-        // }
+
+        if (isBotEnabled) {
+          // send txs via line bot
+          sendTxLog(loggedTxs);
+        }
       });
 
       // for debug
@@ -165,14 +176,3 @@ if (greeding()) {
 } else {
   process.exit();
 }
-
-// const server = Bun.serve({
-//   // defualt port is 3030
-//   port: Bun.env.PORT || 3030,
-//   fetch(req) {
-//     console.log("request from:" + req.headers.get("host"));
-//     return new Response("How! Bun! Bun!");
-//   },
-// });
-//
-// console.log(`Listening on http://localhost:${server.port} ...`);

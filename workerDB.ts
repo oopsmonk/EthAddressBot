@@ -43,6 +43,8 @@ self.addEventListener("message", async (event) => {
     const query = `INSERT INTO block (chainid, blockNumber)
       VALUES (${chainId.toString()}, ${num.toString()})
       ON CONFLICT (chainid) DO UPDATE SET blockNumber=${num.toString()};`;
+
+    // insert tx to db
     db.prepare(query).run();
     console.log("db update latest block: " + num.toString());
   } else if (event.data.txs) {

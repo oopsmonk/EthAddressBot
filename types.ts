@@ -5,6 +5,10 @@ declare module "bun" {
     TX_IGNORE_ZERO: string;
     TX_IGNORE_SELF: string;
     LATEST_BLOCK_NUMBER: string;
+    LINE_ACCESS_TOKEN: string;
+    LINE_CHANNEL_SECRET: string;
+    LINE_USERS: string;
+    LINE_GROUPS: string;
   }
 }
 

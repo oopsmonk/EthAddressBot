@@ -6,6 +6,7 @@ import { type Transaction } from "./types";
 declare var self: Worker;
 
 let web3: any = undefined;
+// TODO: read from database and env
 let latestBlock: bigint = 0n;
 
 self.addEventListener("message", async (event) => {
