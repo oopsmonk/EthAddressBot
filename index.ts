@@ -3,6 +3,8 @@ import addrList from "./targetAddresses.json";
 import { type AddressList, type Transaction } from "./types";
 import Web3 from "web3";
 import { startServer, sendTxLog } from "./LineBotServer";
+import { existsSync } from "fs";
+import { Database } from "bun:sqlite";
 
 const targetList: AddressList[] = addrList.target;
 const aliasList: AddressList[] = addrList.alias;
@@ -71,10 +73,6 @@ function greeding(): boolean {
   console.log("==========Configure=============");
   console.log("RPC Endpoint: " + Bun.env.RPC_PROVIDER);
   console.log("LatestBlock interval: " + Bun.env.LATEST_BLOCK_WORKER_INTERVAL);
-  console.log(
-    "Starting Block Number: " +
-      (Bun.env.LATEST_BLOCK_NUMBER === "0" ? "latest" : Bun.env.LATEST_BLOCK_NUMBER)
-  );
   console.log("Ignore Zero transactions: " + String(Bun.env.TX_IGNORE_ZERO === "1"));
   console.log("Ignore `from` == `to` transactions: " + String(Bun.env.TX_IGNORE_SELF === "1"));
   console.log("===== Monitoring Addresses =====");
@@ -98,11 +96,35 @@ function greeding(): boolean {
   return true;
 }
 
+function initLatestBlockNum(chainId: bigint): bigint {
+  const cfgBlockNum = BigInt(Bun.env.LATEST_BLOCK_NUMBER || 0n);
+  const dbFile = Bun.env.DB_FILE;
+  if (!existsSync(dbFile)) {
+    // db not exist
+    return cfgBlockNum;
+  }
+
+  // read latest block from DB
+  const db = new Database(dbFile);
+  const query = db.query(`select blockNumber from block where chainId = ${chainId}`);
+  const dbBlockNUm = query.get() as { blockNumber: bigint };
+  // close db
+  db.close(false);
+
+  if (dbBlockNUm.blockNumber > cfgBlockNum) {
+    // use DB block number
+    return dbBlockNUm.blockNumber;
+  }
+  return cfgBlockNum;
+}
+
 if (greeding()) {
   // get network info
   const web3 = new Web3(new Web3.providers.HttpProvider(rpc));
   const id = await web3.eth.getChainId();
+  const initBlockNum = initLatestBlockNum(id);
   console.log("Network chainId: " + id);
+  console.log("Starting Block Number: " + initBlockNum);
   // init db worker
   dbWorker = new Worker("./workerDB.ts");
   dbWorker.addEventListener("open", () => {
@@ -132,13 +154,13 @@ if (greeding()) {
   blockWorker.addEventListener("message", (event) => {
     if (event.data.ready) {
       console.log("latest block worker ready to go!!");
-      blockWorker.postMessage({ start: true });
+      blockWorker.postMessage({ start: true, blockNum: initBlockNum });
     } else if (event.data.done) {
       console.log("blockWorker finished: " + event.data.done);
       const blockNum: bigint = event.data.done;
       // update latest block in db
       dbWorker.postMessage({ updateLatestBlockNumber: { chainId: id, latestNum: blockNum } });
-      blockWorker.postMessage({ start: true });
+      blockWorker.postMessage({ start: true, blockNum: blockNum });
     } else if (event.data.txs) {
       const txs: Transaction[] = event.data.txs;
       console.log("block txs: " + txs.length);

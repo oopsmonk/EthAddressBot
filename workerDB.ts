@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import type { Transaction } from "./types";
 
 let db: Database;
-const dbFile: string = "./ledger.db";
+const dbFile: string = Bun.env.DB_FILE;
 
 function createDB(dbPath: string, chainId: bigint) {
   const txSchema = `CREATE TABLE IF NOT EXISTS txs_${chainId.toString()} (

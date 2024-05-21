@@ -9,6 +9,7 @@ declare module "bun" {
     LINE_CHANNEL_SECRET: string;
     LINE_USERS: string;
     LINE_GROUPS: string;
+    DB_FILE: string;
   }
 }
 
