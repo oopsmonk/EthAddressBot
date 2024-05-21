@@ -1,0 +1,18 @@
+{
+  "target": [
+    {
+      "name": "Alice",
+      "address": "0x143b6765C06fB7b6dc2f5c2C29B8fC9d3ea21DFB"
+    }
+  ],
+  "alias": [
+    {
+      "name": "Mark",
+      "address": "0x3d095b917AD30D3CB7691D555E872A4159B69cac"
+    },
+    {
+      "name": "Bob",
+      "address": "0x7631Bf02524EAd8B6141c82349E49D0B3854bFe9"
+    }
+  ]
+}
