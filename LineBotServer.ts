@@ -119,6 +119,16 @@ const textEventHandler = async (
         },
       ],
     });
+  } else if (event.message.text === "\\history") {
+    await client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [
+        {
+          type: "text",
+          text: "TODO",
+        },
+      ],
+    });
   } else if (event.message.text === "\\ping") {
     // Create a new message.
     // Reply to the user.
@@ -163,17 +173,7 @@ export function sendTxLog(txs: Transaction[]) {
       text = text.concat(tx2Text(tx.value, tx.hash, toTg.name, tx.hash));
     } else {
       // unexpected case?
-      console.log("unknow tx??");
-      console.warn(
-        "[unexpected] value:" +
-          tx.value +
-          " from: " +
-          tx.from +
-          " , to: " +
-          tx.to +
-          " , hash: " +
-          tx.hash
-      );
+      console.log("[uncexpected] tx skip??");
     }
   }
   // console.log("Bot text:\n" + text);

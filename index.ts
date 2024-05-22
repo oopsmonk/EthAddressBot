@@ -14,7 +14,6 @@ let dbWorker: Worker;
 let blockWorker: Worker;
 
 let consoleLogger: Worker;
-// let lineBotLogger: Worker; // TODO
 let isBotEnabled: boolean = false;
 
 function isTragetAddressUnique(list: AddressList[]) {
@@ -161,6 +160,7 @@ if (greeding()) {
       const blockNum: bigint = event.data.done;
       // update latest block in db
       dbWorker.postMessage({ updateLatestBlockNumber: { chainId: id, latestNum: blockNum } });
+      // start latest block worker agian with new block number
       blockWorker.postMessage({ start: true, blockNum: blockNum });
     } else if (event.data.txs) {
       const txs: Transaction[] = event.data.txs;
@@ -175,17 +175,16 @@ if (greeding()) {
       txWorker.addEventListener("message", (event) => {
         const loggedTxs = event.data as Transaction[];
         console.log("txWorker logging txs: " + loggedTxs.length);
-        // TODO:
-        // handle logger or display, like db, lineBot, console
+        // insert to db
         if (dbWorker) {
           dbWorker.postMessage({ txs: loggedTxs });
         }
+        // show on console
         if (consoleLogger) {
           consoleLogger.postMessage({ txs: loggedTxs });
         }
-
+        // notify via LineBot
         if (isBotEnabled) {
-          // send txs via line bot
           sendTxLog(loggedTxs);
         }
       });

@@ -1,21 +1,10 @@
-import Web3 from "web3";
-import { type AddressList, type Transaction } from "./types";
-import addrList from "./targetAddresses.json";
+import { type Transaction } from "./types";
+import { targetList } from "./constants";
 
 // prevents TS errors
 declare var self: Worker;
 
-const targetList: AddressList[] = addrList.target;
-const aliasList: AddressList[] = addrList.alias;
 const loggedTxs: Transaction[] = [];
-
-// compare addresses with lowercase
-targetList.forEach((t) => {
-  t.address = t.address.toLocaleLowerCase();
-});
-aliasList.forEach((t) => {
-  t.address = t.address.toLocaleLowerCase();
-});
 
 self.addEventListener("message", (event) => {
   const txs: Transaction[] = event.data.txs;

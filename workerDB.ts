@@ -6,13 +6,13 @@ const dbFile: string = Bun.env.DB_FILE;
 
 function createDB(dbPath: string, chainId: bigint) {
   const txSchema = `CREATE TABLE IF NOT EXISTS txs_${chainId.toString()} (
-    blockHash TEXT,
     blockNumber INTEGER,
+    blockHash TEXT,
     addrFrom TEXT,
-    hash TEXT PRIMARY KEY,
     addrTo TEXT,
-    transactionIndex INTEGER,
     value INTEGER
+    transactionIndex INTEGER,
+    hash TEXT PRIMARY KEY,
     );`;
 
   const blockSchema = `CREATE TABLE IF NOT EXISTS block (

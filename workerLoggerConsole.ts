@@ -1,17 +1,6 @@
 import { Web3 } from "web3";
-import { type AddressList, type Transaction } from "./types";
-import addrList from "./targetAddresses.json";
-
-const targetList: AddressList[] = addrList.target;
-const aliasList: AddressList[] = addrList.alias;
-
-// compare addresses with lowercase
-targetList.forEach((t) => {
-  t.address = t.address.toLocaleLowerCase();
-});
-aliasList.forEach((t) => {
-  t.address = t.address.toLocaleLowerCase();
-});
+import type { Transaction } from "./types";
+import { targetList, aliasList } from "./constants";
 
 function txlogger(value: bigint, from: string, to: string, hash: string) {
   const ether = Web3.utils.fromWei(value, "ether");
@@ -44,16 +33,11 @@ self.addEventListener("message", async (event) => {
         txlogger(tx.value, tx.hash, toTg.name, tx.hash);
       } else {
         // unexpected case?
-        console.log("unknow tx??");
-        console.warn(
-          "[unexpected] value:" +
-            tx.value +
-            " from: " +
-            tx.from +
-            " , to: " +
-            tx.to +
-            " , hash: " +
-            tx.hash
+        console.log("[uncexpected] tx??");
+        console.log(
+          `from: ${tx.from}\nto: ${tx.to}\nvalue:${Web3.utils.fromWei(tx.value, "ether")}\n${
+            Bun.env.TX_HASH_URL
+          }${tx.hash}\n`
         );
       }
     }
