@@ -3,28 +3,16 @@
 // Import all dependencies, mostly using destructuring for better view.
 import type { ClientConfig, MessageAPIResponseBase, MiddlewareConfig } from "@line/bot-sdk";
 import { messagingApi, middleware, webhook, HTTPFetchError } from "@line/bot-sdk";
-
 import type { Application, Request, Response } from "express";
 import express from "express";
-
-import addrList from "./targetAddresses.json";
-import { type AddressList, type Transaction } from "./types";
+import { targetList, aliasList } from "./constants";
 import Web3 from "web3";
+import type { Transaction } from "./types";
 
 const lineUsers: string = Bun.env.LINE_USERS || "";
 const lineGroups: string = Bun.env.LINE_GROUPS || "";
 const userList: string[] = lineUsers.split(",");
 const groupList: string[] = lineGroups.split(",");
-
-const targetList: AddressList[] = addrList.target;
-const aliasList: AddressList[] = addrList.alias;
-// compare addresses with lowercase
-targetList.forEach((t) => {
-  t.address = t.address.toLocaleLowerCase();
-});
-aliasList.forEach((t) => {
-  t.address = t.address.toLocaleLowerCase();
-});
 
 // Setup all LINE client and Express configurations.
 const clientConfig: ClientConfig = {

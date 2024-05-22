@@ -1,13 +1,11 @@
 import figlet from "figlet";
-import addrList from "./targetAddresses.json";
 import { type AddressList, type Transaction } from "./types";
 import Web3 from "web3";
 import { startServer, sendTxLog } from "./LineBotServer";
 import { existsSync } from "fs";
 import { Database } from "bun:sqlite";
+import { targetList, aliasList } from "./constants";
 
-const targetList: AddressList[] = addrList.target;
-const aliasList: AddressList[] = addrList.alias;
 const rpc = Bun.env.RPC_PROVIDER;
 
 let dbWorker: Worker;
@@ -97,6 +95,9 @@ function greeding(): boolean {
 }
 
 function initLatestBlockNum(chainId: bigint): bigint {
+  // check if need to build from transaction hash db frist
+  // TODO
+
   const cfgBlockNum = BigInt(Bun.env.LATEST_BLOCK_NUMBER || 0n);
   const dbFile = Bun.env.DB_FILE;
   if (!existsSync(dbFile)) {
