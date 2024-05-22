@@ -6,21 +6,25 @@ const dbFile: string = Bun.env.DB_FILE;
 
 function createDB(dbPath: string, chainId: bigint) {
   const txSchema = `CREATE TABLE IF NOT EXISTS txs_${chainId.toString()} (
+    id INTEGER PRIMARY KEY,
     blockNumber INTEGER,
     blockHash TEXT,
     addrFrom TEXT,
     addrTo TEXT,
-    value INTEGER
+    value INTEGER,
     transactionIndex INTEGER,
-    hash TEXT PRIMARY KEY,
+    hash TEXT UNIQUE
     );`;
 
   const blockSchema = `CREATE TABLE IF NOT EXISTS block (
-    chainId INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
+    chainId INTEGER UNIQUE,
     blockNumber INTEGER
     );`;
 
   console.log("open db: " + dbPath);
+  // console.log(txSchema);
+  // console.log(blockSchema);
   db = new Database(dbPath);
   // create tx schema if not exist
   db.run(txSchema);
@@ -58,6 +62,7 @@ self.addEventListener("message", async (event) => {
       ).run(tx.blockHash, tx.blockNumber, tx.from, tx.hash, tx.to, tx.transactionIndex, tx.value);
     }
   } else if (event.data.destroy) {
+    console.log("terminate DB worker");
     db.close();
     process.exit();
   }

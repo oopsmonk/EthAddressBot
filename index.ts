@@ -107,13 +107,13 @@ function initLatestBlockNum(chainId: bigint): bigint {
   // read latest block from DB
   const db = new Database(dbFile);
   const query = db.query(`select blockNumber from block where chainId = ${chainId}`);
-  const dbBlockNUm = query.get() as { blockNumber: bigint };
+  const dbBlockNum = query.get() as { blockNumber: bigint };
   // close db
   db.close(false);
 
-  if (dbBlockNUm.blockNumber > cfgBlockNum) {
+  if (dbBlockNum && dbBlockNum.blockNumber > cfgBlockNum) {
     // use DB block number
-    return dbBlockNUm.blockNumber;
+    return dbBlockNum.blockNumber;
   }
   return cfgBlockNum;
 }
@@ -125,6 +125,7 @@ if (greeding()) {
   const initBlockNum = initLatestBlockNum(id);
   console.log("Network chainId: " + id);
   console.log("Starting Block Number: " + initBlockNum);
+
   // init db worker
   dbWorker = new Worker("./workerDB.ts");
   dbWorker.addEventListener("open", () => {
