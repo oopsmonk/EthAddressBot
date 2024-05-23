@@ -56,10 +56,18 @@ self.addEventListener("message", async (event) => {
     for (const tx of txs) {
       console.log("db add tx: " + tx.hash);
       db.query(
-        `INSERT INTO txs_${tx.chainId.toString()}
+        `INSERT or IGNORE INTO txs_${tx.chainId!.toString()}
         (blockHash, blockNumber, addrFrom, hash, addrTo, transactionIndex, value)
         VALUES (?, ?, ?, ?, ?, ?, ?);`
-      ).run(tx.blockHash, tx.blockNumber, tx.from, tx.hash, tx.to, tx.transactionIndex, tx.value);
+      ).run(
+        tx.blockHash ? tx.blockHash : "",
+        tx.blockNumber ? tx.blockNumber : 0n,
+        tx.from,
+        tx.hash,
+        tx.to ? tx.to : "",
+        tx.transactionIndex ? tx.transactionIndex : 0n,
+        tx.value
+      );
     }
   } else if (event.data.destroy) {
     console.log("terminate DB worker");

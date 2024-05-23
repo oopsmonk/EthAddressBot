@@ -95,9 +95,6 @@ function greeding(): boolean {
 }
 
 function initLatestBlockNum(chainId: bigint): bigint {
-  // check if need to build from transaction hash db frist
-  // TODO
-
   const cfgBlockNum = BigInt(Bun.env.LATEST_BLOCK_NUMBER || 0n);
   const dbFile = Bun.env.DB_FILE;
   if (!existsSync(dbFile)) {
@@ -119,17 +116,138 @@ function initLatestBlockNum(chainId: bigint): bigint {
   return cfgBlockNum;
 }
 
+async function buildExternalTxs(web3: Web3, db: Database): Promise<bigint> {
+  // check if need to build from transaction hash db frist
+  const externalTxs = Bun.file("./txHash.json");
+  let latestBlockNum = 0n;
+  if (await externalTxs.exists()) {
+    console.log("insert external txs...");
+    const txHashList = await externalTxs.json();
+    const txList: Transaction[] = [];
+    // get transactions from network
+    for (const hash of txHashList) {
+      const tx = await web3.eth.getTransaction(hash);
+      const txBlockNum = tx.blockNumber ? BigInt(tx.blockNumber) : undefined;
+      const fromTg = targetList.find((item) => item.address === tx.from);
+      const toTg = targetList.find((item) => item.address === tx.to);
+
+      if (!fromTg && !toTg) {
+        console.log("ignore tx: " + hash);
+        continue;
+      }
+
+      if (txBlockNum) {
+        latestBlockNum = txBlockNum > latestBlockNum ? txBlockNum : latestBlockNum;
+        console.log("external tx latest block number: " + latestBlockNum);
+      }
+      // add tx to list
+      txList.push({
+        blockHash: tx.blockHash,
+        blockNumber: tx.blockNumber ? BigInt(tx.blockNumber) : undefined,
+        from: tx.from,
+        gas: BigInt(tx.gas),
+        gasPrice: BigInt(tx.gasPrice),
+        hash: tx.hash,
+        input: tx.input,
+        nonce: BigInt(tx.nonce),
+        to: tx.to,
+        transactionIndex: tx.transactionIndex ? BigInt(tx.transactionIndex) : undefined,
+        value: BigInt(tx.value),
+        type: BigInt(tx.type),
+        chainId: tx.chainId ? BigInt(tx.chainId) : undefined,
+        v: tx.v ? BigInt(tx.v) : undefined,
+        r: tx.r,
+        s: tx.s,
+      });
+    }
+
+    // insert txs into db
+    for (const tx of txList) {
+      console.log("db add tx: " + tx.hash);
+      db.query(
+        `INSERT OR IGNORE INTO txs_${tx.chainId!.toString()}
+        (blockHash, blockNumber, addrFrom, hash, addrTo, transactionIndex, value)
+        VALUES (?, ?, ?, ?, ?, ?, ?);`
+      ).run(
+        tx.blockHash ? tx.blockHash : "",
+        tx.blockNumber ? tx.blockNumber : 0n,
+        tx.from,
+        tx.hash,
+        tx.to ? tx.to : "",
+        tx.transactionIndex ? tx.transactionIndex : 0n,
+        tx.value
+      );
+    }
+  }
+
+  return latestBlockNum;
+}
+
+function createTables(db: Database, chainId: bigint) {
+  const txSchema = `CREATE TABLE IF NOT EXISTS txs_${chainId.toString()} (
+    id INTEGER PRIMARY KEY,
+    blockNumber INTEGER,
+    blockHash TEXT,
+    addrFrom TEXT,
+    addrTo TEXT,
+    value INTEGER,
+    transactionIndex INTEGER,
+    hash TEXT UNIQUE
+    );`;
+
+  const blockSchema = `CREATE TABLE IF NOT EXISTS block (
+    id INTEGER PRIMARY KEY,
+    chainId INTEGER UNIQUE,
+    blockNumber INTEGER
+    );`;
+
+  // create tx schema if not exist
+  // console.log(txSchema);
+  db.run(txSchema);
+
+  // create block history if not exist
+  // console.log(blockSchema);
+  db.run(blockSchema);
+  console.log("create db tables");
+}
+
+async function initDBAndBlockNumber(web3: Web3): Promise<bigint> {
+  let latestBLockNum = 0n;
+  const id = await web3.eth.getChainId();
+  const db = new Database(Bun.env.DB_FILE);
+  // create db if not exist
+  createTables(db, id);
+
+  // import external tx?
+  const blockNum = await buildExternalTxs(web3, db);
+  latestBLockNum = blockNum > latestBLockNum ? blockNum : latestBLockNum;
+
+  // update the latest block in db
+  const query = `INSERT INTO block (chainid, blockNumber)
+      VALUES (${id.toString()}, ${latestBLockNum.toString()})
+      ON CONFLICT (chainid) DO UPDATE SET blockNumber=${latestBLockNum.toString()};`;
+
+  // insert tx to db
+  db.prepare(query).run();
+  console.log("db update latest block: " + latestBLockNum);
+  db.close();
+
+  return latestBLockNum;
+}
+
 if (greeding()) {
   // get network info
   const web3 = new Web3(new Web3.providers.HttpProvider(rpc));
   const id = await web3.eth.getChainId();
-  const initBlockNum = initLatestBlockNum(id);
+  // make sure db is create and import transactions if needed
+  const initBlockNum = await initDBAndBlockNumber(web3);
   console.log("Network chainId: " + id);
   console.log("Starting Block Number: " + initBlockNum);
 
   // init db worker
   dbWorker = new Worker("./workerDB.ts");
   dbWorker.addEventListener("open", () => {
+    // TODO: unnecessary to create db since db was created in initDBAndBlockNumber()
     dbWorker.postMessage({ create: id });
   });
 
