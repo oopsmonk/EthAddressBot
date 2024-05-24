@@ -14,6 +14,7 @@ let blockWorker: Worker;
 
 let consoleLogger: Worker;
 let isBotEnabled: boolean = false;
+let currChainId = 0n;
 
 function isTragetAddressUnique(list: AddressList[]) {
   const addressSet = new Set();
@@ -144,41 +145,45 @@ async function buildExternalTxs(web3: Web3): Promise<bigint> {
     }
 
     // insert txs into db
-    dbInsertTxs(txList);
+    dbInsertTxs(chainId, txList);
   }
 
   return latestBlockNum;
 }
 
 async function initDBAndBlockNumber(web3: Web3): Promise<bigint> {
-  let latestBLockNum = 0n;
+  let latestBLockNum = BigInt(Bun.env.LATEST_BLOCK_NUMBER);
   const id = await web3.eth.getChainId();
   // create db if not exist
   dbCreateTables(id);
 
   // import external tx?
   const blockNum = await buildExternalTxs(web3);
-  latestBLockNum = blockNum > latestBLockNum ? blockNum : latestBLockNum;
+  dbSetLatestBlockNum(id, blockNum);
 
-  dbSetLatestBlockNum(id, latestBLockNum);
+  if (latestBLockNum === 0n) {
+    // start from the latest block number
+    return latestBLockNum;
+  }
 
-  return latestBLockNum;
+  // start from block number in db or env?
+  return blockNum > latestBLockNum ? blockNum : latestBLockNum;
 }
 
 if (greeding()) {
   // get network info
   const web3 = new Web3(new Web3.providers.HttpProvider(rpc));
-  const id = await web3.eth.getChainId();
+  currChainId = await web3.eth.getChainId();
   // make sure db is create and import transactions if needed
   const initBlockNum = await initDBAndBlockNumber(web3);
-  console.log("Network chainId: " + id);
+  console.log("Network chainId: " + currChainId);
   console.log("Starting Block Number: " + initBlockNum);
 
   // init db worker
   dbWorker = new Worker("./workerDB.ts");
   dbWorker.addEventListener("open", () => {
     // TODO: unnecessary to create db since db was created in initDBAndBlockNumber()
-    dbWorker.postMessage({ create: id });
+    dbWorker.postMessage({ create: currChainId });
   });
 
   dbWorker.addEventListener("message", (event) => {
@@ -209,7 +214,9 @@ if (greeding()) {
       console.log("blockWorker finished: " + event.data.done);
       const blockNum: bigint = event.data.done;
       // update latest block in db
-      dbWorker.postMessage({ updateLatestBlockNumber: { chainId: id, latestNum: blockNum } });
+      dbWorker.postMessage({
+        updateLatestBlockNumber: { chainId: currChainId, latestNum: blockNum },
+      });
       // start latest block worker agian with new block number
       blockWorker.postMessage({ start: true, blockNum: blockNum });
     } else if (event.data.txs) {
@@ -227,7 +234,7 @@ if (greeding()) {
         console.log("txWorker logging txs: " + loggedTxs.length);
         // insert to db
         if (dbWorker) {
-          dbWorker.postMessage({ txs: loggedTxs });
+          dbWorker.postMessage({ txs: loggedTxs, chainId: currChainId });
         }
         // show on console
         if (consoleLogger) {

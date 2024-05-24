@@ -12,8 +12,9 @@ self.addEventListener("message", async (event) => {
     const num: bigint = event.data.updateLatestBlockNumber.latestNum;
     dbSetLatestBlockNum(chainId, num);
   } else if (event.data.txs) {
-    const txs = event.data.txs as Transaction[];
-    dbInsertTxs(txs);
+    const txs: Transaction[] = event.data.txs;
+    const id: bigint = event.data.chainId;
+    dbInsertTxs(id, txs);
   } else if (event.data.destroy) {
     console.log("terminate DB worker");
     process.exit();
