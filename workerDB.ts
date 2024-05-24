@@ -1,77 +1,21 @@
-import { Database } from "bun:sqlite";
 import type { Transaction } from "./types";
-
-let db: Database;
-const dbFile: string = Bun.env.DB_FILE;
-
-function createDB(dbPath: string, chainId: bigint) {
-  const txSchema = `CREATE TABLE IF NOT EXISTS txs_${chainId.toString()} (
-    id INTEGER PRIMARY KEY,
-    blockNumber INTEGER,
-    blockHash TEXT,
-    addrFrom TEXT,
-    addrTo TEXT,
-    value INTEGER,
-    transactionIndex INTEGER,
-    hash TEXT UNIQUE
-    );`;
-
-  const blockSchema = `CREATE TABLE IF NOT EXISTS block (
-    id INTEGER PRIMARY KEY,
-    chainId INTEGER UNIQUE,
-    blockNumber INTEGER
-    );`;
-
-  console.log("open db: " + dbPath);
-  // console.log(txSchema);
-  // console.log(blockSchema);
-  db = new Database(dbPath);
-  // create tx schema if not exist
-  db.run(txSchema);
-  // create block history if not exist
-  db.run(blockSchema);
-}
+import { dbCreateTables, dbInsertTxs, dbSetLatestBlockNum } from "./utils";
 
 self.addEventListener("message", async (event) => {
   if (event.data.create) {
     const chainId: bigint = event.data.create;
     // console.log("create db: " + event.data.create);
-    createDB(dbFile, chainId);
+    dbCreateTables(chainId);
     postMessage({ init: true });
-  } else if (event.data.queryLatestBlockNumber) {
-    // TODO
-    console.log("TODO: db query latest block: ");
   } else if (event.data.updateLatestBlockNumber) {
     const chainId: bigint = event.data.updateLatestBlockNumber.chainId;
     const num: bigint = event.data.updateLatestBlockNumber.latestNum;
-    const query = `INSERT INTO block (chainid, blockNumber)
-      VALUES (${chainId.toString()}, ${num.toString()})
-      ON CONFLICT (chainid) DO UPDATE SET blockNumber=${num.toString()};`;
-
-    // insert tx to db
-    db.prepare(query).run();
-    console.log("db update latest block: " + num.toString());
+    dbSetLatestBlockNum(chainId, num);
   } else if (event.data.txs) {
     const txs = event.data.txs as Transaction[];
-    for (const tx of txs) {
-      console.log("db add tx: " + tx.hash);
-      db.query(
-        `INSERT or IGNORE INTO txs_${tx.chainId!.toString()}
-        (blockHash, blockNumber, addrFrom, hash, addrTo, transactionIndex, value)
-        VALUES (?, ?, ?, ?, ?, ?, ?);`
-      ).run(
-        tx.blockHash ? tx.blockHash : "",
-        tx.blockNumber ? tx.blockNumber : 0n,
-        tx.from,
-        tx.hash,
-        tx.to ? tx.to : "",
-        tx.transactionIndex ? tx.transactionIndex : 0n,
-        tx.value
-      );
-    }
+    dbInsertTxs(txs);
   } else if (event.data.destroy) {
     console.log("terminate DB worker");
-    db.close();
     process.exit();
   }
 });

@@ -11,7 +11,7 @@ self.addEventListener("message", (event) => {
   // compare addresses with lowercase
   txs.forEach((tx) => {
     tx.from = tx.from.toLocaleLowerCase();
-    tx.to = tx.to.toLocaleLowerCase();
+    tx.to = tx.to ? tx.to.toLocaleLowerCase() : "";
   });
 
   for (const tx of txs) {
