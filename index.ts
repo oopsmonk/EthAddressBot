@@ -2,8 +2,6 @@ import figlet from "figlet";
 import { type AddressList, type Transaction } from "./types";
 import Web3 from "web3";
 import { startServer, sendTxLog } from "./LineBotServer";
-import { existsSync } from "fs";
-import { Database } from "bun:sqlite";
 import { targetList, aliasList } from "./constants";
 import { dbCreateTables, dbInsertTxs, dbSetLatestBlockNum } from "./utils";
 
@@ -111,10 +109,23 @@ async function buildExternalTxs(web3: Web3): Promise<bigint> {
       const txBlockNum = tx.blockNumber ? BigInt(tx.blockNumber) : undefined;
       const fromTg = targetList.find((item) => item.address === tx.from);
       const toTg = targetList.find((item) => item.address === tx.to);
+      // console.log(tx);
 
       if (txBlockNum) {
+        console.log("import tx block number: " + txBlockNum);
         latestBlockNum = txBlockNum > latestBlockNum ? txBlockNum : latestBlockNum;
-        console.log("external tx latest block number: " + latestBlockNum);
+      }
+
+      // ignore zero tx
+      if (BigInt(tx.value) === 0n && Bun.env.TX_IGNORE_ZERO === "1") {
+        // console.log("ignore zero value tx: " + tx.hash);
+        continue;
+      }
+
+      // ignore self?
+      if (tx.from === tx.to && Bun.env.TX_IGNORE_SELF === "1") {
+        // console.log("ignore from === to tx: " + tx.hash);
+        continue;
       }
 
       if (!fromTg && !toTg) {
@@ -126,21 +137,17 @@ async function buildExternalTxs(web3: Web3): Promise<bigint> {
       // add tx to list
       txList.push({
         blockHash: tx.blockHash,
-        blockNumber: tx.blockNumber ? BigInt(tx.blockNumber) : undefined,
+        blockNumber: tx.blockNumber,
         from: tx.from,
-        gas: BigInt(tx.gas),
-        gasPrice: BigInt(tx.gasPrice),
+        gas: tx.gas,
+        gasPrice: tx.gasPrice,
         hash: tx.hash,
         input: tx.input,
-        nonce: BigInt(tx.nonce),
+        nonce: tx.nonce,
         to: tx.to,
-        transactionIndex: tx.transactionIndex ? BigInt(tx.transactionIndex) : undefined,
-        value: BigInt(tx.value),
-        type: BigInt(tx.type),
+        transactionIndex: tx.transactionIndex,
+        value: tx.value,
         chainId: chainId, // use current chain id
-        v: tx.v ? BigInt(tx.v) : undefined,
-        r: tx.r,
-        s: tx.s,
       });
     }
 

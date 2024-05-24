@@ -16,7 +16,7 @@ self.addEventListener("message", (event) => {
 
   for (const tx of txs) {
     // ignore zero tx
-    if (tx.value === 0n && Bun.env.TX_IGNORE_ZERO === "1") {
+    if (BigInt(tx.value) === 0n && Bun.env.TX_IGNORE_ZERO === "1") {
       // console.log("ignore zero value tx: " + tx.hash);
       continue;
     }

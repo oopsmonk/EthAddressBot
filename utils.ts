@@ -6,12 +6,12 @@ const dbPath = Bun.env.DB_FILE;
 export function dbCreateTables(chainId: bigint) {
   const txSchema = `CREATE TABLE IF NOT EXISTS txs_${chainId.toString()} (
     id INTEGER PRIMARY KEY,
-    blockNumber INTEGER,
+    blockNumber TEXT,
     blockHash TEXT,
     addrFrom TEXT,
     addrTo TEXT,
-    value INTEGER,
-    transactionIndex INTEGER,
+    value TEXT,
+    transactionIndex TEXT,
     hash TEXT UNIQUE
     );`;
 

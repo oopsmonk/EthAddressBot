@@ -21,19 +21,15 @@ export interface AddressList {
 
 export interface Transaction {
   blockHash?: string;
-  blockNumber?: bigint;
+  blockNumber?: string;
   from: string;
-  gas: bigint;
-  gasPrice: bigint;
+  gas: string;
+  gasPrice: string;
   hash: string;
   input: string;
-  nonce: bigint;
+  nonce: string;
   to: string | undefined | null;
-  transactionIndex?: bigint;
-  value: bigint;
-  type: bigint;
+  transactionIndex?: string;
+  value: string;
   chainId?: bigint;
-  v?: bigint;
-  r: string;
-  s: string;
 }
