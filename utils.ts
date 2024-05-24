@@ -41,16 +41,16 @@ export function dbInsertTxs(chainId: bigint, txs: Transaction[]) {
     console.log("db add tx: " + tx.hash);
     db.query(
       `INSERT OR IGNORE INTO txs_${chainId.toString()}
-        (blockHash, blockNumber, addrFrom, hash, addrTo, transactionIndex, value)
+        (blockNumber, blockHash, addrFrom, addrTo, value, transactionIndex, hash)
         VALUES (?, ?, ?, ?, ?, ?, ?);`
     ).run(
+      tx.blockNumber ? tx.blockNumber : "",
       tx.blockHash ? tx.blockHash : "",
-      tx.blockNumber ? tx.blockNumber : 0n,
       tx.from,
-      tx.hash,
       tx.to ? tx.to : "",
-      tx.transactionIndex ? tx.transactionIndex : 0n,
-      tx.value
+      tx.value,
+      tx.transactionIndex ? tx.transactionIndex : "",
+      tx.hash
     );
   }
 
