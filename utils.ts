@@ -39,8 +39,9 @@ export function dbInsertTxs(txs: Transaction[]) {
   // insert txs into db
   for (const tx of txs) {
     console.log("db add tx: " + tx.hash);
+    const chainId = tx.chainId ? tx.chainId : 0n;
     db.query(
-      `INSERT OR IGNORE INTO txs_${tx.chainId!.toString()}
+      `INSERT OR IGNORE INTO txs_${chainId.toString()}
         (blockHash, blockNumber, addrFrom, hash, addrTo, transactionIndex, value)
         VALUES (?, ?, ?, ?, ?, ?, ?);`
     ).run(
