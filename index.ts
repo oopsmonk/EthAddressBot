@@ -101,6 +101,7 @@ async function buildExternalTxs(web3: Web3): Promise<bigint> {
   let latestBlockNum = 0n;
   if (await externalTxs.exists()) {
     console.log("insert external txs...");
+    const chainId = await web3.eth.getChainId();
     const txHashList = await externalTxs.json();
     const txList: Transaction[] = [];
     // get transactions from network
@@ -135,7 +136,7 @@ async function buildExternalTxs(web3: Web3): Promise<bigint> {
         transactionIndex: tx.transactionIndex ? BigInt(tx.transactionIndex) : undefined,
         value: BigInt(tx.value),
         type: BigInt(tx.type),
-        chainId: tx.chainId ? BigInt(tx.chainId) : undefined,
+        chainId: chainId, // use current chain id
         v: tx.v ? BigInt(tx.v) : undefined,
         r: tx.r,
         s: tx.s,
