@@ -1,6 +1,7 @@
 // worker that polling latest block from RPC endpoint
 import Web3 from "web3";
-import { type Transaction } from "./types";
+import { type Web3Transaction } from "./types";
+import { parsingTransactions } from "./utils";
 
 // prevents TS errors
 declare var self: Worker;
@@ -27,19 +28,33 @@ self.addEventListener("message", async (event) => {
       console.log("current block: " + blockNum);
       if (startNum === 0n) {
         // frist block to handle
-        await web3.eth.getBlock(blockNum, true).then((block: { transactions: Transaction[] }) => {
-          console.log("frist block: " + blockNum);
-          postMessage({ txs: block.transactions });
-        });
+        await web3.eth
+          .getBlock(blockNum, true)
+          .then((block: { transactions: Web3Transaction[] }) => {
+            console.log("frist block: " + blockNum);
+            if (block.transactions === undefined) {
+              // console.log("no txs");
+              postMessage({ txs: [] });
+            } else {
+              const txs = parsingTransactions(block.transactions);
+              postMessage({ txs: txs });
+            }
+          });
       } else if (startNum < blockNum && startNum !== 0n) {
         let diffBlockNum = blockNum - startNum;
         console.log("latest: " + startNum + " , current: " + blockNum + " , diff:" + diffBlockNum);
         while (diffBlockNum) {
           // get blocks detail
           const n = blockNum - diffBlockNum + 1n;
-          await web3.eth.getBlock(n, true).then((block: { transactions: Transaction[] }) => {
+          await web3.eth.getBlock(n, true).then((block: { transactions: Web3Transaction[] }) => {
             console.log("new block: " + n);
-            postMessage({ txs: block.transactions });
+            if (block.transactions === undefined) {
+              // console.log("no txs");
+              postMessage({ txs: [] });
+            } else {
+              const txs = parsingTransactions(block.transactions);
+              postMessage({ txs: txs });
+            }
           });
           diffBlockNum--;
         }

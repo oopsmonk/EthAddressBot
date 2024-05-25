@@ -2,8 +2,8 @@ import { Web3 } from "web3";
 import type { Transaction } from "./types";
 import { targetList, aliasList } from "./constants";
 
-function txlogger(value: string, from: string, to: string, hash: string) {
-  const ether = Web3.utils.fromWei(value, "ether");
+function txlogger(value: bigint, from: string, to: string, hash: string) {
+  const ether = Web3.utils.fromWei(value.toString(), "ether");
   console.log(`value: ${ether} , from: ${from}, to: ${to}\n${Bun.env.TX_HASH_URL}${hash}`);
 }
 

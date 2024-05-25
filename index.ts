@@ -1,9 +1,9 @@
 import figlet from "figlet";
-import { type AddressList, type Transaction } from "./types";
+import { type AddressList, type Transaction, type Web3Transaction } from "./types";
 import Web3 from "web3";
 import { startServer, sendTxLog } from "./LineBotServer";
 import { targetList, aliasList } from "./constants";
-import { dbCreateTables, dbInsertTxs, dbSetLatestBlockNum } from "./utils";
+import { dbCreateTables, dbInsertTxs, dbSetLatestBlockNum, parsingTx } from "./utils";
 
 const rpc = Bun.env.RPC_PROVIDER;
 
@@ -96,28 +96,30 @@ function greeding(): boolean {
 
 async function buildExternalTxs(web3: Web3): Promise<bigint> {
   // check if need to build from transaction hash db frist
-  const externalTxs = Bun.file("./txHash.json");
+  const externalTxs = Bun.file(Bun.env.IMPOERT_TX_HASH);
   let latestBlockNum = 0n;
   if (await externalTxs.exists()) {
-    console.log("insert external txs...");
+    console.log("import txs from " + Bun.env.IMPOERT_TX_HASH);
     const chainId = await web3.eth.getChainId();
     const txHashList = await externalTxs.json();
     const txList: Transaction[] = [];
     // get transactions from network
     for (const hash of txHashList) {
-      const tx = await web3.eth.getTransaction(hash);
-      const txBlockNum = tx.blockNumber ? BigInt(tx.blockNumber) : undefined;
+      const web3tx: Web3Transaction = (await web3.eth.getTransaction(
+        hash
+      )) as unknown as Web3Transaction;
+      const tx = parsingTx(web3tx);
       const fromTg = targetList.find((item) => item.address === tx.from);
       const toTg = targetList.find((item) => item.address === tx.to);
       // console.log(tx);
 
-      if (txBlockNum) {
-        console.log("import tx block number: " + txBlockNum);
-        latestBlockNum = txBlockNum > latestBlockNum ? txBlockNum : latestBlockNum;
+      if (tx.blockNumber) {
+        console.log("import tx block number: " + tx.blockNumber);
+        latestBlockNum = tx.blockNumber > latestBlockNum ? tx.blockNumber : latestBlockNum;
       }
 
       // ignore zero tx
-      if (BigInt(tx.value) === 0n && Bun.env.TX_IGNORE_ZERO === "1") {
+      if (tx.value === 0n && Bun.env.TX_IGNORE_ZERO === "1") {
         // console.log("ignore zero value tx: " + tx.hash);
         continue;
       }
@@ -135,20 +137,7 @@ async function buildExternalTxs(web3: Web3): Promise<bigint> {
       }
 
       // add tx to list
-      txList.push({
-        blockHash: tx.blockHash,
-        blockNumber: tx.blockNumber,
-        from: tx.from,
-        gas: tx.gas,
-        gasPrice: tx.gasPrice,
-        hash: tx.hash,
-        input: tx.input,
-        nonce: tx.nonce,
-        to: tx.to,
-        transactionIndex: tx.transactionIndex,
-        value: tx.value,
-        chainId: chainId, // use current chain id
-      });
+      txList.push(tx);
     }
 
     // insert txs into db
@@ -165,8 +154,11 @@ async function initDBAndBlockNumber(web3: Web3): Promise<bigint> {
   dbCreateTables(id);
 
   // import external tx?
-  const blockNum = await buildExternalTxs(web3);
-  dbSetLatestBlockNum(id, blockNum);
+  let blockNum = 0n;
+  if (Bun.env.IMPOERT_TX_HASH) {
+    blockNum = await buildExternalTxs(web3);
+    dbSetLatestBlockNum(id, blockNum);
+  }
 
   if (latestBLockNum === 0n) {
     // start from the latest block number

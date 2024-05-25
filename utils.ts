@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import type { Transaction } from "./types";
+import type { Transaction, Web3Transaction } from "./types";
 
 const dbPath = Bun.env.DB_FILE;
 
@@ -44,12 +44,12 @@ export function dbInsertTxs(chainId: bigint, txs: Transaction[]) {
         (blockNumber, blockHash, addrFrom, addrTo, value, transactionIndex, hash)
         VALUES (?, ?, ?, ?, ?, ?, ?);`
     ).run(
-      tx.blockNumber ? tx.blockNumber : "",
+      tx.blockNumber ? tx.blockNumber.toString() : "",
       tx.blockHash ? tx.blockHash : "",
       tx.from,
       tx.to ? tx.to : "",
-      tx.value,
-      tx.transactionIndex ? tx.transactionIndex : "",
+      tx.value.toString(),
+      tx.transactionIndex ? tx.transactionIndex.toString() : "",
       tx.hash
     );
   }
@@ -68,4 +68,24 @@ export function dbSetLatestBlockNum(chainId: bigint, Num: bigint) {
   db.prepare(query).run();
   console.log("db update latest block: " + Num);
   db.close();
+}
+
+export const parsingTx = (wTx: Web3Transaction) => {
+  return {
+    blockHash: wTx.blockHash,
+    blockNumber: wTx.blockNumber,
+    hash: wTx.hash,
+    from: wTx.from,
+    to: wTx.to,
+    transactionIndex: wTx.transactionIndex,
+    value: wTx.value,
+  } as Transaction;
+};
+
+export function parsingTransactions(web3Txs: Web3Transaction[]) {
+  const txs: Transaction[] = [];
+  for (const tx of web3Txs) {
+    txs.push(parsingTx(tx));
+  }
+  return txs;
 }

@@ -11,6 +11,7 @@ declare module "bun" {
     LINE_USERS: string;
     LINE_GROUPS: string;
     DB_FILE: string;
+    IMPOERT_TX_HASH: string;
   }
 }
 
@@ -19,17 +20,30 @@ export interface AddressList {
   address: string;
 }
 
+export interface Web3Transaction {
+  hash: string;
+  type: bigint;
+  nonce: bigint;
+  blockHash?: string;
+  blockNumber?: bigint;
+  transactionIndex: bigint;
+  from: string;
+  to?: string;
+  value: bigint;
+  gas: bigint;
+  gasPrice: bigint;
+  input: string;
+  v: bigint;
+  r: string;
+  s: string;
+}
+
 export interface Transaction {
   blockHash?: string;
-  blockNumber?: string;
-  from: string;
-  gas: string;
-  gasPrice: string;
+  blockNumber?: bigint;
   hash: string;
-  input: string;
-  nonce: string;
-  to: string | undefined | null;
-  transactionIndex?: string;
-  value: string;
-  chainId?: bigint;
+  from: string;
+  to?: string;
+  transactionIndex: bigint;
+  value: bigint;
 }
