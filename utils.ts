@@ -1,5 +1,8 @@
 import { Database } from "bun:sqlite";
 import type { Transaction, Web3Transaction } from "./types";
+import * as XLSX from "xlsx";
+import { mkdirSync, existsSync } from "fs";
+import * as path from "path";
 
 const dbPath = Bun.env.DB_FILE;
 
@@ -49,7 +52,7 @@ export function dbInsertTxs(chainId: bigint, txs: Transaction[]) {
       tx.from,
       tx.to ? tx.to : "",
       tx.value.toString(),
-      tx.transactionIndex ? tx.transactionIndex.toString() : "",
+      tx.transactionIndex ? tx.transactionIndex.toString() : "0",
       tx.hash
     );
   }
@@ -88,4 +91,36 @@ export function parsingTransactions(web3Txs: Web3Transaction[]) {
     txs.push(parsingTx(tx));
   }
   return txs;
+}
+
+export function tx2file(filePath: string) {
+  const db = new Database(dbPath, { readonly: true });
+  const qchainIds = db.query(`SELECT chainID from block;`);
+  let ids = qchainIds.values();
+  // console.log(ids);
+  let rowCount = 0;
+
+  // create a new book
+  const workbook = XLSX.utils.book_new();
+
+  // write table data to sheets
+  for (const id of ids) {
+    // console.log("parsing id " + id);
+    const query = db.query(`SELECT * from txs_${id};`);
+    let rows = query.all();
+    rowCount += rows.length;
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, `txs_${id}`);
+  }
+
+  // make sure dir is existing
+  const dir = path.dirname(filePath);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  // Write to an Excel file
+  XLSX.writeFile(workbook, filePath);
+
+  db.close();
+  return rowCount;
 }

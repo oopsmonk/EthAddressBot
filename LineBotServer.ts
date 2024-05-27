@@ -8,6 +8,8 @@ import express from "express";
 import { targetList, aliasList } from "./constants";
 import Web3 from "web3";
 import type { Transaction } from "./types";
+import { tx2file } from "./utils";
+import * as path from "path";
 
 const lineUsers: string = Bun.env.LINE_USERS || "";
 const lineGroups: string = Bun.env.LINE_GROUPS || "";
@@ -93,7 +95,7 @@ const textEventHandler = async (
     config = config.concat(`Chain ID: ${chainId}\n`);
     config = config.concat(`Network Block Number: ${networkBlock}\n`);
     config = config.concat(
-      `Block Interval: ${Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL) / 1000}s`
+      `Block Interval: ${Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL) / 1000}s\n`
     );
     config = config.concat(`Explorer: ${Bun.env.TX_HASH_URL}\n`);
     config = config.concat(`DB File: ${Bun.env.DB_FILE}\n`);
@@ -108,15 +110,30 @@ const textEventHandler = async (
       ],
     });
   } else if (event.message.text === "\\history") {
-    await client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [
-        {
-          type: "text",
-          text: "TODO",
-        },
-      ],
-    });
+    if (!Bun.env.ZROK_FILE_SERVER || !Bun.env.ZROK_SHARE_DIR || !Bun.env.EXPORT_TX_FILE) {
+      await client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [
+          {
+            type: "text",
+            text: "Feature is not supported!",
+          },
+        ],
+      });
+    } else {
+      const filePath = path.join(Bun.env.ZROK_SHARE_DIR, Bun.env.EXPORT_TX_FILE);
+      const downloadURL = `${Bun.env.ZROK_FILE_SERVER}/${Bun.env.EXPORT_TX_FILE}`;
+      const rows = tx2file(filePath);
+      await client.replyMessage({
+        replyToken: event.replyToken,
+        messages: [
+          {
+            type: "text",
+            text: `Export ${rows} txs into\n${downloadURL}\n`,
+          },
+        ],
+      });
+    }
   } else if (event.message.text === "\\ping") {
     // Create a new message.
     // Reply to the user.

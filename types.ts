@@ -12,6 +12,9 @@ declare module "bun" {
     LINE_GROUPS: string;
     DB_FILE: string;
     IMPOERT_TX_HASH: string;
+    ZROK_FILE_SERVER: string;
+    ZROK_SHARE_DIR: string;
+    EXPORT_TX_FILE: string;
   }
 }
 

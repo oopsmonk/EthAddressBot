@@ -3,7 +3,7 @@ import { type AddressList, type Transaction, type Web3Transaction } from "./type
 import Web3 from "web3";
 import { startServer, sendTxLog } from "./LineBotServer";
 import { targetList, aliasList } from "./constants";
-import { dbCreateTables, dbInsertTxs, dbSetLatestBlockNum, parsingTx } from "./utils";
+import { dbCreateTables, dbInsertTxs, dbSetLatestBlockNum, parsingTx, tx2file } from "./utils";
 
 const rpc = Bun.env.RPC_PROVIDER;
 
@@ -105,9 +105,13 @@ async function buildExternalTxs(web3: Web3): Promise<bigint> {
     const txList: Transaction[] = [];
     // get transactions from network
     for (const hash of txHashList) {
-      const web3tx: Web3Transaction = (await web3.eth.getTransaction(
-        hash
-      )) as unknown as Web3Transaction;
+      const web3tx: Web3Transaction = (await web3.eth.getTransaction(hash).catch((err) => {
+        console.log(err);
+        return undefined;
+      })) as unknown as Web3Transaction;
+      if (!web3tx) {
+        continue;
+      }
       const tx = parsingTx(web3tx);
       const fromTg = targetList.find((item) => item.address === tx.from);
       const toTg = targetList.find((item) => item.address === tx.to);
