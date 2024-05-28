@@ -2,9 +2,12 @@
 import Web3 from "web3";
 import { type Web3Transaction } from "./types";
 import { parsingTransactions } from "./utils";
+import { LogLevel, logger } from "./logger";
 
 // prevents TS errors
 declare var self: Worker;
+
+const tag = "blockWorker";
 
 let web3: any = undefined;
 let latestBlock: bigint = 0n;
@@ -15,23 +18,24 @@ self.addEventListener("message", async (event) => {
     if (web3) {
       postMessage({ ready: true });
     } else {
-      console.log("init work failed: " + event.data.nodeRPC);
+      // console.log("init work failed: " + event.data.nodeRPC);
+      logger(LogLevel.Error, tag, `init failed: ${event.data.nodeRPC}`);
     }
   } else if (event.data.start) {
     const startNum = BigInt(event.data.blockNum);
     if (web3 == undefined) {
-      console.log("cannot init node PRC, terminat worker...");
+      logger(LogLevel.Error, tag, `cannot init node PRC, terminat worker`);
       process.exit();
     }
 
     await web3.eth.getBlockNumber().then(async (blockNum: bigint) => {
-      console.log("current block: " + blockNum);
+      logger(LogLevel.Debug, tag, `current block: ${blockNum}`);
       if (startNum === 0n) {
         // frist block to handle
         await web3.eth
           .getBlock(blockNum, true)
           .then((block: { transactions: Web3Transaction[] }) => {
-            console.log("frist block: " + blockNum);
+            logger(LogLevel.Info, tag, `frist block: ${blockNum}`);
             if (block.transactions === undefined) {
               // console.log("no txs");
               postMessage({ txs: [] });
@@ -42,12 +46,17 @@ self.addEventListener("message", async (event) => {
           });
       } else if (startNum < blockNum && startNum !== 0n) {
         let diffBlockNum = blockNum - startNum;
-        console.log("latest: " + startNum + " , current: " + blockNum + " , diff:" + diffBlockNum);
+        logger(
+          LogLevel.Info,
+          tag,
+          `latest: ${startNum}, current: ${blockNum}, diff: ${diffBlockNum}`
+        );
         while (diffBlockNum) {
           // get blocks detail
           const n = blockNum - diffBlockNum + 1n;
           await web3.eth.getBlock(n, true).then((block: { transactions: Web3Transaction[] }) => {
-            console.log("new block: " + n);
+            // console.log("new block: " + n);
+            logger(LogLevel.Debug, tag, `new block: ${n}`);
             if (block.transactions === undefined) {
               // console.log("no txs");
               postMessage({ txs: [] });
@@ -64,6 +73,7 @@ self.addEventListener("message", async (event) => {
     });
 
     Bun.sleepSync(Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL));
+    logger(LogLevel.Info, tag, `done: ${latestBlock}`);
     postMessage({ done: latestBlock });
   }
 });

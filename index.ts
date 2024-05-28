@@ -4,8 +4,10 @@ import Web3 from "web3";
 import { startServer, sendTxLog } from "./LineBotServer";
 import { targetList, aliasList } from "./constants";
 import { dbCreateTables, dbInsertTxs, dbSetLatestBlockNum, parsingTx, tx2file } from "./utils";
+import { LogLevel, logger } from "./logger";
 
 const rpc = Bun.env.RPC_PROVIDER;
+const tag = "Main";
 
 let dbWorker: Worker;
 let blockWorker: Worker;
@@ -20,7 +22,8 @@ function isTragetAddressUnique(list: AddressList[]) {
 
   for (const item of list) {
     if (addressSet.has(item.address)) {
-      console.log("duplicated address: " + item.address);
+      // console.log("duplicated address: " + item.address);
+      logger(LogLevel.Debug, tag, `duplicated address: ${item.address}`);
       unique = false;
     } else {
       addressSet.add(item.address);
@@ -32,27 +35,32 @@ function isTragetAddressUnique(list: AddressList[]) {
 
 function validateConfig(): boolean {
   if (targetList.length == 0 || targetList == undefined) {
-    console.log("Invalid target address list!");
+    // console.log("Invalid target address list!");
+    logger(LogLevel.Error, tag, "Invalid target address list!");
     return false;
   }
 
   if (!isTragetAddressUnique(targetList.concat(aliasList))) {
-    console.log("duplicate address found in the target list!");
+    // console.log("duplicate address found in the target list!");
+    logger(LogLevel.Error, tag, "duplicated address found in the target list!");
     return false;
   }
 
   if (!Bun.env.RPC_PROVIDER) {
-    console.log("RPC_PROVIDER is not defined in env file");
+    // console.log("RPC_PROVIDER is not defined in env file");
+    logger(LogLevel.Error, tag, "RPC_PROVIDER is not defined in env file");
     return false;
   }
 
   if (!Bun.env.LATEST_BLOCK_WORKER_INTERVAL) {
-    console.log("LATEST_BLOCK_WORKER_INTERVAL is not defined in env file");
+    // console.log("LATEST_BLOCK_WORKER_INTERVAL is not defined in env file");
+    logger(LogLevel.Error, tag, "LATEST_BLOCK_WORKER_INTERVAL is not defined in env file");
     return false;
   }
 
   if (!Bun.env.LATEST_BLOCK_NUMBER && Bun.env.LATEST_BLOCK_NUMBER !== "0") {
-    console.log("LATEST_BLOCK_NUMBER is not defined in env file");
+    // console.log("LATEST_BLOCK_NUMBER is not defined in env file");
+    logger(LogLevel.Error, tag, "LATEST_BLOCK_NUMBER is not defined in env file");
     return false;
   }
 
@@ -84,11 +92,13 @@ function greeding(): boolean {
   console.log("================================");
 
   if (Bun.env.LINE_USERS || Bun.env.LINE_USERS) {
-    console.log("LineBot is starting...");
+    // console.log("LineBot is starting...");
     startServer();
     isBotEnabled = true;
+    logger(LogLevel.Info, tag, "LineBot is started");
   } else {
-    console.log("LineBot is disabled...");
+    // console.log("LineBot is disabled...");
+    logger(LogLevel.Info, tag, "LineBot is disabled");
     isBotEnabled = false;
   }
   return true;
@@ -99,7 +109,8 @@ async function buildExternalTxs(web3: Web3): Promise<bigint> {
   const externalTxs = Bun.file(Bun.env.IMPOERT_TX_HASH);
   let latestBlockNum = 0n;
   if (await externalTxs.exists()) {
-    console.log("import txs from " + Bun.env.IMPOERT_TX_HASH);
+    // console.log("import txs from " + Bun.env.IMPOERT_TX_HASH);
+    logger(LogLevel.Info, tag, `import txs from ${Bun.env.IMPOERT_TX_HASH}`);
     const chainId = await web3.eth.getChainId();
     const txHashList = await externalTxs.json();
     const txList: Transaction[] = [];
@@ -118,25 +129,29 @@ async function buildExternalTxs(web3: Web3): Promise<bigint> {
       // console.log(tx);
 
       if (tx.blockNumber) {
-        console.log("import tx block number: " + tx.blockNumber);
+        // console.log("import tx block number: " + tx.blockNumber);
+        logger(LogLevel.Debug, tag, `import tx block number ${tx.blockNumber}`);
         latestBlockNum = tx.blockNumber > latestBlockNum ? tx.blockNumber : latestBlockNum;
       }
 
       // ignore zero tx
       if (tx.value === 0n && Bun.env.TX_IGNORE_ZERO === "1") {
         // console.log("ignore zero value tx: " + tx.hash);
+        logger(LogLevel.Debug, tag, `ignore zero value: ${tx.hash}`);
         continue;
       }
 
       // ignore self?
       if (tx.from === tx.to && Bun.env.TX_IGNORE_SELF === "1") {
         // console.log("ignore from === to tx: " + tx.hash);
+        logger(LogLevel.Debug, tag, `ignore from === to: ${tx.hash}`);
         continue;
       }
 
       if (!fromTg && !toTg) {
         // still update latestBlockNum but ignore the tx not in the target list
-        console.log("ignore tx: " + hash);
+        // console.log("ignore tx: " + hash);
+        logger(LogLevel.Debug, tag, `ignore tx not in address list: ${tx.hash}`);
         continue;
       }
 
@@ -179,19 +194,21 @@ if (greeding()) {
   currChainId = await web3.eth.getChainId();
   // make sure db is create and import transactions if needed
   const initBlockNum = await initDBAndBlockNumber(web3);
-  console.log("Network chainId: " + currChainId);
-  console.log("Starting Block Number: " + initBlockNum);
+  logger(LogLevel.Info, tag, `Network chainId: ${currChainId}`);
+  logger(LogLevel.Info, tag, `Starting Block Number: ${initBlockNum}`);
 
   // init db worker
   dbWorker = new Worker("./workerDB.ts");
   dbWorker.addEventListener("open", () => {
+    logger(LogLevel.Debug, tag, "DB worker start");
     // TODO: unnecessary to create db since db was created in initDBAndBlockNumber()
     dbWorker.postMessage({ create: currChainId });
   });
 
   dbWorker.addEventListener("message", (event) => {
     if (event.data.init) {
-      console.log("database is created...");
+      // console.log("database is created...");
+      logger(LogLevel.Info, tag, "database is created...");
     }
   });
 
@@ -199,23 +216,27 @@ if (greeding()) {
   // TODO: can be configured via env
   consoleLogger = new Worker("./workerLoggerConsole.ts");
   consoleLogger.addEventListener("open", () => {
-    console.log("console logger is ready");
+    // console.log("console logger is ready");
+    logger(LogLevel.Debug, tag, "Console worker start");
   });
 
   // init latestblock worker
   blockWorker = new Worker("./workerLatestBlock.ts");
   blockWorker.addEventListener("open", () => {
-    console.log("LatestBlock worker init: " + rpc);
+    // console.log("LatestBlock worker init: " + rpc);
+    logger(LogLevel.Debug, tag, "Block worker start");
     blockWorker.postMessage({ nodeRPC: rpc });
   });
 
   blockWorker.addEventListener("message", (event) => {
     if (event.data.ready) {
-      console.log("latest block worker ready to go!!");
+      // console.log("latest block worker ready to go!!");
+      logger(LogLevel.Debug, tag, "Block worker ready");
       blockWorker.postMessage({ start: true, blockNum: initBlockNum });
     } else if (event.data.done) {
-      console.log("blockWorker finished: " + event.data.done);
+      // console.log("blockWorker finished: " + event.data.done);
       const blockNum: bigint = event.data.done;
+      logger(LogLevel.Info, tag, `Block worker finished: ${blockNum}`);
       // update latest block in db
       dbWorker.postMessage({
         updateLatestBlockNumber: { chainId: currChainId, latestNum: blockNum },
@@ -224,17 +245,19 @@ if (greeding()) {
       blockWorker.postMessage({ start: true, blockNum: blockNum });
     } else if (event.data.txs) {
       const txs: Transaction[] = event.data.txs;
-      console.log("block txs: " + txs.length);
+      logger(LogLevel.Info, tag, `block txs: ${txs.length}`);
       const txWorker = new Worker("./workerTx.ts");
 
       txWorker.addEventListener("open", () => {
         // console.log("starting tx worker....");
+        logger(LogLevel.Debug, tag, "TX worker start");
         txWorker.postMessage({ txs: txs });
       });
 
       txWorker.addEventListener("message", (event) => {
         const loggedTxs = event.data as Transaction[];
-        console.log("txWorker logging txs: " + loggedTxs.length);
+        // console.log("txWorker logging txs: " + loggedTxs.length);
+        logger(LogLevel.Debug, tag, `TX worker loggind txs: ${loggedTxs.length}`);
         // insert to db
         if (dbWorker) {
           dbWorker.postMessage({ txs: loggedTxs, chainId: currChainId });
@@ -250,9 +273,10 @@ if (greeding()) {
       });
 
       // for debug
-      // txWorker.addEventListener("close", (event) => {
-      //   console.log("txWorker is being closed");
-      // });
+      txWorker.addEventListener("close", (event) => {
+        // console.log("txWorker is being closed");
+        logger(LogLevel.Debug, tag, "TX worker is closed");
+      });
     }
   });
 } else {

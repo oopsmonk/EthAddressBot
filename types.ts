@@ -15,6 +15,7 @@ declare module "bun" {
     ZROK_FILE_SERVER: string;
     ZROK_SHARE_DIR: string;
     EXPORT_TX_FILE: string;
+    DEBUG_LEVEL: string;
   }
 }
 

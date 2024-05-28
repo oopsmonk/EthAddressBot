@@ -3,8 +3,10 @@ import type { Transaction, Web3Transaction } from "./types";
 import * as XLSX from "xlsx";
 import { mkdirSync, existsSync } from "fs";
 import * as path from "path";
+import { LogLevel, logger } from "./logger";
 
 const dbPath = Bun.env.DB_FILE;
+const tag = "utils";
 
 export function dbCreateTables(chainId: bigint) {
   const txSchema = `CREATE TABLE IF NOT EXISTS txs_${chainId.toString()} (
@@ -34,14 +36,15 @@ export function dbCreateTables(chainId: bigint) {
   db.run(blockSchema);
 
   db.close();
-  console.log("create db tables");
+  // console.log("create db tables");
+  logger(LogLevel.Debug, tag, "creat db tables");
 }
 
 export function dbInsertTxs(chainId: bigint, txs: Transaction[]) {
   const db = new Database(dbPath);
   // insert txs into db
   for (const tx of txs) {
-    console.log("db add tx: " + tx.hash);
+    logger(LogLevel.Debug, tag, `db add tx: ${tx.hash}`);
     db.query(
       `INSERT OR IGNORE INTO txs_${chainId.toString()}
         (blockNumber, blockHash, addrFrom, addrTo, value, transactionIndex, hash)
@@ -69,7 +72,7 @@ export function dbSetLatestBlockNum(chainId: bigint, Num: bigint) {
 
   // insert tx to db
   db.prepare(query).run();
-  console.log("db update latest block: " + Num);
+  logger(LogLevel.Debug, tag, `db update latest block: ${Num}`);
   db.close();
 }
 

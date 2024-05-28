@@ -10,11 +10,13 @@ import Web3 from "web3";
 import type { Transaction } from "./types";
 import { tx2file } from "./utils";
 import * as path from "path";
+import { LogLevel, logger } from "./logger";
 
 const lineUsers: string = Bun.env.LINE_USERS || "";
 const lineGroups: string = Bun.env.LINE_GROUPS || "";
 const userList: string[] = lineUsers.split(",");
 const groupList: string[] = lineGroups.split(",");
+const tag = "LineBot";
 
 // Setup all LINE client and Express configurations.
 const clientConfig: ClientConfig = {
@@ -41,7 +43,7 @@ const textEventHandler = async (
 
   if (event.type === "join" || event.type === "leave") {
     if (event.source && event.source.type === "group")
-      console.log("Bot " + event.type + " group id: " + event.source.groupId);
+      logger(LogLevel.Info, tag, `Bot: ${event.type} , group id: ${event.source.groupId}`);
   }
   // Check if for a text message
   if (event.type !== "message" || event.message.type !== "text") {
@@ -53,7 +55,7 @@ const textEventHandler = async (
   // Check if message is repliable
   if (!event.replyToken) return;
 
-  console.log("user : " + event.source?.userId + " , msg: " + event.message.text);
+  logger(LogLevel.Info, tag, `user: ${event.source?.userId} , msg: ${event.message.text}`);
   // handle commands
   if (event.message.text === "\\alias") {
     let text = "";
@@ -178,10 +180,11 @@ export function sendTxLog(txs: Transaction[]) {
       text = text.concat(tx2Text(tx.value, tx.hash, toTg.name, tx.hash));
     } else {
       // unexpected case?
-      console.log("[uncexpected] tx skip??");
+      logger(LogLevel.Error, tag, `unexpected tx: ${tx.hash}`);
     }
   }
   // console.log("Bot text:\n" + text);
+  logger(LogLevel.Debug, tag, `text: \n${text}`);
   // send out the text
   sendGroupText(text);
 }
@@ -190,9 +193,9 @@ export function sendUsersText(text: string) {
   // to user list
   for (const user of userList) {
     if (user.length) {
-      console.log("msg to user: " + user + " , " + text);
+      logger(LogLevel.Info, tag, `to user: ${user} , msg: ${text}`);
       client.pushMessage({ to: user, messages: [{ type: "text", text: text }] }).catch((err) => {
-        console.log("send msg err: ");
+        logger(LogLevel.Error, tag, "sent msg error: ");
         console.log(err);
       });
     }
@@ -203,9 +206,9 @@ export function sendGroupText(text: string) {
   // to group list
   for (const group of groupList) {
     if (group.length) {
-      console.log("msg to group: " + group + " , " + text);
+      logger(LogLevel.Info, tag, `to group: ${group} , msg: ${text}`);
       client.pushMessage({ to: group, messages: [{ type: "text", text: text }] }).catch((err) => {
-        console.log("send msg err: ");
+        logger(LogLevel.Error, tag, "sent msg error: ");
         console.log(err);
       });
     }
@@ -266,8 +269,8 @@ export function startServer() {
 
   // Create a server and listen to it.
   app.listen(PORT, () => {
-    console.log(`Line Bot start at port: ${PORT}`);
-    console.log("Users:" + userList);
-    console.log("Groups: " + groupList);
+    logger(LogLevel.Info, tag, `Line Bot start at port: ${PORT}`);
+    logger(LogLevel.Info, tag, `Users: ${userList}`);
+    logger(LogLevel.Info, tag, `Groups: ${groupList}`);
   });
 }
