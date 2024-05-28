@@ -66,6 +66,7 @@ const textEventHandler = async (
       text = text.concat(`${a.name}:\n${a.address}\n`);
     }
 
+    logger(LogLevel.Debug, tag, `sent: \n${text}`);
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
@@ -102,6 +103,7 @@ const textEventHandler = async (
     config = config.concat(`Explorer: ${Bun.env.TX_HASH_URL}\n`);
     config = config.concat(`DB File: ${Bun.env.DB_FILE}\n`);
 
+    logger(LogLevel.Debug, tag, `sent: \n${config}`);
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
@@ -126,12 +128,14 @@ const textEventHandler = async (
       const filePath = path.join(Bun.env.ZROK_SHARE_DIR, Bun.env.EXPORT_TX_FILE);
       const downloadURL = `${Bun.env.ZROK_FILE_SERVER}/${Bun.env.EXPORT_TX_FILE}`;
       const rows = tx2file(filePath);
+      const msg = `Export ${rows} txs into\n${downloadURL}\n`;
+      logger(LogLevel.Debug, tag, `sent: \n${msg}`);
       await client.replyMessage({
         replyToken: event.replyToken,
         messages: [
           {
             type: "text",
-            text: `Export ${rows} txs into\n${downloadURL}\n`,
+            text: msg,
           },
         ],
       });
