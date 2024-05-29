@@ -198,7 +198,7 @@ if (greeding()) {
   logger(LogLevel.Info, tag, `Starting Block Number: ${initBlockNum}`);
 
   // init db worker
-  dbWorker = new Worker("./workerDB.ts");
+  dbWorker = new Worker("workerDB.ts");
   dbWorker.addEventListener("open", () => {
     logger(LogLevel.Debug, tag, "DB worker start");
     // TODO: unnecessary to create db since db was created in initDBAndBlockNumber()
@@ -214,14 +214,14 @@ if (greeding()) {
 
   // console logger
   // TODO: can be configured via env
-  consoleLogger = new Worker("./workerLoggerConsole.ts");
+  consoleLogger = new Worker("workerLoggerConsole.ts");
   consoleLogger.addEventListener("open", () => {
     // console.log("console logger is ready");
     logger(LogLevel.Debug, tag, "Console worker start");
   });
 
   // init latestblock worker
-  blockWorker = new Worker("./workerLatestBlock.ts");
+  blockWorker = new Worker("workerLatestBlock.ts");
   blockWorker.addEventListener("open", () => {
     // console.log("LatestBlock worker init: " + rpc);
     logger(LogLevel.Debug, tag, "Block worker start");
@@ -247,7 +247,7 @@ if (greeding()) {
       const txs: Transaction[] = event.data.txs;
       logger(LogLevel.Info, tag, `block txs: ${txs.length}`);
       if (txs.length !== 0) {
-        const txWorker = new Worker("./workerTx.ts");
+        const txWorker = new Worker("workerTx.ts");
 
         txWorker.addEventListener("open", () => {
           // console.log("starting tx worker....");

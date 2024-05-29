@@ -3,10 +3,10 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch index.ts",
+    "dev": "bun run --watch ./src/index.ts",
     "test": "bun test --watch",
-    "release-x64": "bun build --compile --target=bun-linux-x64 --minify --sourcemap index.ts --outfile ./bin/EthAddrLogger-x64",
-    "release-arm64": "bun build --compile --target=bun-linux-arm64 --minify --sourcemap index.ts --outfile ./bin/EthAddrLogger-arm64"
+    "release-x64": "bun build --compile --target=bun-linux-x64 --minify --sourcemap ./src/index.ts --outfile ./bin/EthAddrLogger-x64",
+    "release-arm64": "bun build --compile --target=bun-linux-arm64 --minify --sourcemap ./src/index.ts --outfile ./bin/EthAddrLogger-arm64"
   },
   "devDependencies": {
     "@types/bun": "latest"

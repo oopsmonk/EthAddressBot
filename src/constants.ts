@@ -1,4 +1,4 @@
-import addrList from "./targetAddresses.json";
+import addrList from "../targetAddresses.json";
 import type { AddressList } from "./types";
 
 export const targetList: AddressList[] = addrList.target;
