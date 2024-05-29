@@ -54,17 +54,24 @@ self.addEventListener("message", async (event) => {
         while (diffBlockNum) {
           // get blocks detail
           const n = blockNum - diffBlockNum + 1n;
-          await web3.eth.getBlock(n, true).then((block: { transactions: Web3Transaction[] }) => {
-            // console.log("new block: " + n);
-            logger(LogLevel.Debug, tag, `new block: ${n}`);
-            if (block.transactions === undefined) {
-              // console.log("no txs");
-              postMessage({ txs: [] });
-            } else {
-              const txs = parsingTransactions(block.transactions);
-              postMessage({ txs: txs });
-            }
-          });
+          await web3.eth
+            .getBlock(n, true)
+            .then((block: { transactions: Web3Transaction[] }) => {
+              // console.log("new block: " + n);
+              logger(LogLevel.Debug, tag, `new block: ${n}`);
+              if (block.transactions === undefined || block.transactions.length === 0) {
+                // console.log("no txs");
+                postMessage({ txs: [] });
+              } else {
+                const txs = parsingTransactions(block.transactions);
+                postMessage({ txs: txs });
+              }
+            })
+            .catch((err: any) => {
+              // TODO: retry?
+              logger(LogLevel.Error, tag, "getBlock err: ");
+              console.log(err);
+            });
           diffBlockNum--;
         }
       }

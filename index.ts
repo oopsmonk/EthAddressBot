@@ -246,37 +246,39 @@ if (greeding()) {
     } else if (event.data.txs) {
       const txs: Transaction[] = event.data.txs;
       logger(LogLevel.Info, tag, `block txs: ${txs.length}`);
-      const txWorker = new Worker("./workerTx.ts");
+      if (txs.length !== 0) {
+        const txWorker = new Worker("./workerTx.ts");
 
-      txWorker.addEventListener("open", () => {
-        // console.log("starting tx worker....");
-        logger(LogLevel.Debug, tag, "TX worker start");
-        txWorker.postMessage({ txs: txs });
-      });
+        txWorker.addEventListener("open", () => {
+          // console.log("starting tx worker....");
+          logger(LogLevel.Debug, tag, "TX worker start");
+          txWorker.postMessage({ txs: txs });
+        });
 
-      txWorker.addEventListener("message", (event) => {
-        const loggedTxs = event.data as Transaction[];
-        // console.log("txWorker logging txs: " + loggedTxs.length);
-        logger(LogLevel.Debug, tag, `TX worker loggind txs: ${loggedTxs.length}`);
-        // insert to db
-        if (dbWorker) {
-          dbWorker.postMessage({ txs: loggedTxs, chainId: currChainId });
-        }
-        // show on console
-        if (consoleLogger) {
-          consoleLogger.postMessage({ txs: loggedTxs });
-        }
-        // notify via LineBot
-        if (isBotEnabled) {
-          sendTxLog(loggedTxs);
-        }
-      });
+        txWorker.addEventListener("message", (event) => {
+          const loggedTxs = event.data as Transaction[];
+          // console.log("txWorker logging txs: " + loggedTxs.length);
+          logger(LogLevel.Debug, tag, `TX worker loggind txs: ${loggedTxs.length}`);
+          // insert to db
+          if (dbWorker) {
+            dbWorker.postMessage({ txs: loggedTxs, chainId: currChainId });
+          }
+          // show on console
+          if (consoleLogger) {
+            consoleLogger.postMessage({ txs: loggedTxs });
+          }
+          // notify via LineBot
+          if (isBotEnabled) {
+            sendTxLog(loggedTxs);
+          }
+        });
 
-      // for debug
-      txWorker.addEventListener("close", (event) => {
-        // console.log("txWorker is being closed");
-        logger(LogLevel.Debug, tag, "TX worker is closed");
-      });
+        // for debug
+        txWorker.addEventListener("close", (event) => {
+          // console.log("txWorker is being closed");
+          logger(LogLevel.Debug, tag, "TX worker is closed");
+        });
+      }
     }
   });
 } else {
