@@ -26,14 +26,22 @@ export function dbCreateTables(chainId: bigint) {
     blockNumber INTEGER
     );`;
 
+  // keeps target and alias addresses
+  // type: 0 for target, 1 for alias
+  const addrSchema = `CREATE TABLE IF NOT EXISTS addresses (
+    id INTEGER PRIMARY KEY,
+    type INTEGER, -- 0 for target, 1 for alias
+    name TEXT,
+    address TEXT UNIQUE
+    );`;
+
   const db = new Database(dbPath);
   // create tx schema if not exist
-  // console.log(txSchema);
   db.run(txSchema);
-
   // create block history if not exist
-  // console.log(blockSchema);
   db.run(blockSchema);
+  // create addresses table if not exist
+  db.run(addrSchema);
 
   db.close();
   // console.log("create db tables");
@@ -63,6 +71,10 @@ export function dbInsertTxs(chainId: bigint, txs: Transaction[]) {
   db.close();
 }
 
+// TODO
+// export function dbInsertAddr() {}
+// export function dbGetAddr() {}
+
 export function dbSetLatestBlockNum(chainId: bigint, Num: bigint) {
   const db = new Database(dbPath);
   // update the latest block in db
@@ -74,6 +86,14 @@ export function dbSetLatestBlockNum(chainId: bigint, Num: bigint) {
   db.prepare(query).run();
   logger(LogLevel.Debug, tag, `db update latest block: ${Num}`);
   db.close();
+}
+
+export function dbGetLatestBlockNum(chainId: bigint) {
+  const db = new Database(dbPath);
+  // update the latest block in db
+  const num = db.query(`SELECT blockNumber from block WHERE chainId = ${chainId};`).values();
+  db.close();
+  return num;
 }
 
 export const parsingTx = (wTx: Web3Transaction) => {

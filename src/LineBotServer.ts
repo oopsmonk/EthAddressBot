@@ -8,7 +8,7 @@ import express from "express";
 import { targetList, aliasList } from "./constants";
 import Web3 from "web3";
 import type { Transaction } from "./types";
-import { tx2file } from "./utils";
+import { dbGetLatestBlockNum, tx2file } from "./utils";
 import * as path from "path";
 import { LogLevel, logger } from "./logger";
 
@@ -57,7 +57,7 @@ const textEventHandler = async (
 
   logger(LogLevel.Info, tag, `user: ${event.source?.userId} , msg: ${event.message.text}`);
   // handle commands
-  if (event.message.text === "\\alias") {
+  if (event.message.text === "alias") {
     let text = "";
     for (const t of targetList) {
       text = text.concat(`${t.name}:\n${t.address}\n`);
@@ -78,9 +78,9 @@ const textEventHandler = async (
     });
   } else if (event.message.text === "help") {
     let text = "";
-    text = text.concat("\\alias - List of Known Addresses\n");
-    text = text.concat("\\config - Current Settings\n");
-    text = text.concat("\\history- Trasaction History\n");
+    text = text.concat("alias - List of Known Addresses\n");
+    text = text.concat("config - Current Settings\n");
+    text = text.concat("history- Trasaction History\n");
     await client.replyMessage({
       replyToken: event.replyToken,
       messages: [
@@ -90,18 +90,20 @@ const textEventHandler = async (
         },
       ],
     });
-  } else if (event.message.text === "\\config") {
+  } else if (event.message.text === "config") {
     const web3 = new Web3(new Web3.providers.HttpProvider(Bun.env.RPC_PROVIDER));
     const networkBlock = await web3.eth.getBlockNumber();
     const chainId = await web3.eth.getChainId();
+    const dbBlockNum = dbGetLatestBlockNum(chainId);
     let config = `RPC endpoint:\n${Bun.env.RPC_PROVIDER}\n`;
     config = config.concat(`Chain ID: ${chainId}\n`);
     config = config.concat(`Network Block Number: ${networkBlock}\n`);
+    config = config.concat(`DB Block Number: ${dbBlockNum}\n`);
     config = config.concat(
       `Block Interval: ${Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL) / 1000}s\n`
     );
     config = config.concat(`Explorer: ${Bun.env.TX_HASH_URL}\n`);
-    config = config.concat(`DB File: ${Bun.env.DB_FILE}\n`);
+    // config = config.concat(`DB File: ${Bun.env.DB_FILE}\n`);
 
     logger(LogLevel.Debug, tag, `sent: \n${config}`);
     await client.replyMessage({
@@ -113,7 +115,7 @@ const textEventHandler = async (
         },
       ],
     });
-  } else if (event.message.text === "\\history") {
+  } else if (event.message.text === "history") {
     if (!Bun.env.ZROK_FILE_SERVER || !Bun.env.ZROK_SHARE_DIR || !Bun.env.EXPORT_TX_FILE) {
       await client.replyMessage({
         replyToken: event.replyToken,
@@ -140,7 +142,7 @@ const textEventHandler = async (
         ],
       });
     }
-  } else if (event.message.text === "\\ping") {
+  } else if (event.message.text === "ping") {
     // Create a new message.
     // Reply to the user.
     await client.replyMessage({
