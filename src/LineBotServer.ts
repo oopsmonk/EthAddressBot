@@ -11,12 +11,15 @@ import type { Transaction } from "./types";
 import { dbGetLatestBlockNum, tx2file } from "./utils";
 import * as path from "path";
 import { LogLevel, logger } from "./logger";
+import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
 
 const lineUsers: string = Bun.env.LINE_USERS || "";
 const lineGroups: string = Bun.env.LINE_GROUPS || "";
 const userList: string[] = lineUsers.split(",");
 const groupList: string[] = lineGroups.split(",");
 const tag = "LineBot";
+
+let zrokProcess: ChildProcessWithoutNullStreams | undefined = undefined;
 
 // Setup all LINE client and Express configurations.
 const clientConfig: ClientConfig = {
@@ -34,6 +37,27 @@ const client = new messagingApi.MessagingApiClient(clientConfig);
 
 // Create a new Express application.
 const app: Application = express();
+
+const prepareHistory = async (event: webhook.MessageEvent, url: string) => {
+  const filePath = path.join(Bun.env.ZROK_SHARE_DIR, Bun.env.EXPORT_TX_FILE);
+  const downloadURL = `${url}/${Bun.env.EXPORT_TX_FILE}`;
+  const rows = tx2file(filePath);
+  let msg = `Export ${rows} txs into\n${downloadURL}\n`;
+  msg = msg.concat(`the link will be expired in ${Bun.env.ZROK_SHARE_DURATION} minutes\n`);
+
+  if (!event.replyToken) return;
+
+  logger(LogLevel.Debug, tag, `sent: \n${msg}`);
+  await client.replyMessage({
+    replyToken: event.replyToken,
+    messages: [
+      {
+        type: "text",
+        text: msg,
+      },
+    ],
+  });
+};
 
 // Function handler to receive the text.
 const textEventHandler = async (
@@ -103,6 +127,7 @@ const textEventHandler = async (
       `Block Interval: ${Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL) / 1000}s\n`
     );
     config = config.concat(`Explorer: ${Bun.env.TX_HASH_URL}\n`);
+    config = config.concat(`Zrok share duration: ${Bun.env.ZROK_SHARE_DURATION} mins\n`);
     // config = config.concat(`DB File: ${Bun.env.DB_FILE}\n`);
 
     logger(LogLevel.Debug, tag, `sent: \n${config}`);
@@ -116,7 +141,7 @@ const textEventHandler = async (
       ],
     });
   } else if (event.message.text === "history") {
-    if (!Bun.env.ZROK_FILE_SERVER || !Bun.env.ZROK_SHARE_DIR || !Bun.env.EXPORT_TX_FILE) {
+    if (!Bun.env.ZROK_SHARE_DURATION || !Bun.env.ZROK_SHARE_DIR || !Bun.env.EXPORT_TX_FILE) {
       await client.replyMessage({
         replyToken: event.replyToken,
         messages: [
@@ -127,19 +152,42 @@ const textEventHandler = async (
         ],
       });
     } else {
-      const filePath = path.join(Bun.env.ZROK_SHARE_DIR, Bun.env.EXPORT_TX_FILE);
-      const downloadURL = `${Bun.env.ZROK_FILE_SERVER}/${Bun.env.EXPORT_TX_FILE}`;
-      const rows = tx2file(filePath);
-      const msg = `Export ${rows} txs into\n${downloadURL}\n`;
-      logger(LogLevel.Debug, tag, `sent: \n${msg}`);
-      await client.replyMessage({
-        replyToken: event.replyToken,
-        messages: [
-          {
-            type: "text",
-            text: msg,
-          },
-        ],
+      zrokProcess = spawn("zrok", [
+        "share",
+        "public",
+        "--headless",
+        "--backend-mode",
+        "web",
+        Bun.env.ZROK_SHARE_DIR,
+      ]);
+
+      const killZrok = (signal: NodeJS.Signals) => {
+        if (zrokProcess) {
+          zrokProcess.kill(signal);
+          logger(LogLevel.Info, tag, `Zrok process killed: ${signal}`);
+        }
+      };
+
+      setTimeout(() => {
+        // Send Ctrl+C to terminate the zrok
+        killZrok("SIGINT");
+        logger(LogLevel.Info, tag, `Share terminated after ${Bun.env.ZROK_SHARE_DURATION} mins.`);
+      }, Number(Bun.env.ZROK_SHARE_DURATION) * 60 * 1000); //  in milliseconds
+
+      zrokProcess.stderr.on("data", (data) => {
+        // console.error(`Error: ${data}`);
+        const jsonData = JSON.parse(data);
+        if (jsonData.msg) {
+          const urlRegex = /(https?:\/\/[^\s]+)/;
+          const match = jsonData.msg.match(urlRegex);
+
+          if (match) {
+            const url = match[0];
+            // console.log("URL:", url);
+            logger(LogLevel.Info, tag, `found URL: ${url}`);
+            prepareHistory(event, url);
+          }
+        }
       });
     }
   } else if (event.message.text === "ping") {

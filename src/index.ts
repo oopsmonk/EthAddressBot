@@ -64,6 +64,15 @@ function validateConfig(): boolean {
     return false;
   }
 
+  if (Bun.env.LINE_ACCESS_TOKEN && (!Bun.env.ZROK_SHARE_DURATION || !Bun.env.ZROK_SHARE_DIR)) {
+    logger(
+      LogLevel.Error,
+      tag,
+      "ZROK_SHARE_DURATION and ZROK_SHARE_DIR is not dfeined in env file"
+    );
+    return false;
+  }
+
   return true;
 }
 
@@ -284,3 +293,14 @@ if (greeding()) {
 } else {
   process.exit();
 }
+
+// graceful shutdown
+// TODO
+const handleTerminationSignal = (signal: string) => {
+  console.log(`Received ${signal}, terminating child process...`);
+  process.exit();
+};
+
+process.on("SIGINT", () => handleTerminationSignal("SIGINT"));
+process.on("SIGTERM", () => handleTerminationSignal("SIGTERM"));
+// process.on("exit", () => handleTerminationSignal("exit"));
