@@ -251,7 +251,10 @@ if (greeding()) {
         updateLatestBlockNumber: { chainId: currChainId, latestNum: blockNum },
       });
       // start latest block worker agian with new block number
-      blockWorker.postMessage({ start: true, blockNum: blockNum });
+      setTimeout(
+        () => blockWorker.postMessage({ start: true, blockNum: blockNum }),
+        Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL)
+      );
     } else if (event.data.txs) {
       const txs: Transaction[] = event.data.txs;
       logger(LogLevel.Info, tag, `block txs: ${txs.length}`);

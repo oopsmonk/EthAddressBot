@@ -79,7 +79,6 @@ self.addEventListener("message", async (event) => {
       latestBlock = blockNum;
     });
 
-    Bun.sleepSync(Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL));
     logger(LogLevel.Info, tag, `done: ${latestBlock}`);
     postMessage({ done: latestBlock });
   }
