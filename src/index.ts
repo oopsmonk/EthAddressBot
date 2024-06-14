@@ -3,7 +3,7 @@ import { type AddressList, type Transaction, type Web3Transaction } from "./type
 import Web3 from "web3";
 import { startServer, sendTxLog } from "./LineBotServer";
 import { targetList, aliasList } from "./constants";
-import { dbCreateTables, dbInsertTxs, dbSetLatestBlockNum, parsingTx, tx2file } from "./utils";
+import { dbCreateTables, dbInsertTxs, dbSetLatestBlockNum, parsingTx } from "./utils";
 import { LogLevel, logger } from "./logger";
 
 const rpc = Bun.env.RPC_PROVIDER;
@@ -68,7 +68,7 @@ function validateConfig(): boolean {
     logger(
       LogLevel.Error,
       tag,
-      "ZROK_SHARE_DURATION and ZROK_SHARE_DIR is not dfeined in env file"
+      "ZROK_SHARE_DURATION and ZROK_SHARE_DIR is not dfeined in env file",
     );
     return false;
   }
@@ -253,7 +253,7 @@ if (greeding()) {
       // start latest block worker agian with new block number
       setTimeout(
         () => blockWorker.postMessage({ start: true, blockNum: blockNum }),
-        Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL)
+        Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL),
       );
     } else if (event.data.txs) {
       const txs: Transaction[] = event.data.txs;
@@ -286,7 +286,7 @@ if (greeding()) {
         });
 
         // for debug
-        txWorker.addEventListener("close", (event) => {
+        txWorker.addEventListener("close", (_event) => {
           // console.log("txWorker is being closed");
           logger(LogLevel.Debug, tag, "TX worker is closed");
         });

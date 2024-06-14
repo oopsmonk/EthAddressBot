@@ -51,3 +51,8 @@ export interface Transaction {
   transactionIndex: bigint;
   value: bigint;
 }
+
+export enum AdddresType {
+  Target = 0,
+  Alias = 1,
+}

@@ -37,7 +37,7 @@ self.addEventListener("message", async (event) => {
         console.log(
           `from: ${tx.from}\nto: ${tx.to}\nvalue:${Web3.utils.fromWei(tx.value, "ether")}\n${
             Bun.env.TX_HASH_URL
-          }${tx.hash}\n`
+          }${tx.hash}\n`,
         );
       }
     }

@@ -49,7 +49,7 @@ self.addEventListener("message", async (event) => {
         logger(
           LogLevel.Info,
           tag,
-          `latest: ${startNum}, current: ${blockNum}, diff: ${diffBlockNum}`
+          `latest: ${startNum}, current: ${blockNum}, diff: ${diffBlockNum}`,
         );
         while (diffBlockNum) {
           // get blocks detail

@@ -56,7 +56,7 @@ export function dbInsertTxs(chainId: bigint, txs: Transaction[]) {
     db.query(
       `INSERT OR IGNORE INTO txs_${chainId.toString()}
         (blockNumber, blockHash, addrFrom, addrTo, value, transactionIndex, hash)
-        VALUES (?, ?, ?, ?, ?, ?, ?);`
+        VALUES (?, ?, ?, ?, ?, ?, ?);`,
     ).run(
       tx.blockNumber ? tx.blockNumber.toString() : "",
       tx.blockHash ? tx.blockHash : "",
@@ -64,7 +64,7 @@ export function dbInsertTxs(chainId: bigint, txs: Transaction[]) {
       tx.to ? tx.to : "",
       tx.value.toString(),
       tx.transactionIndex ? tx.transactionIndex.toString() : "0",
-      tx.hash
+      tx.hash,
     );
   }
 
@@ -72,7 +72,7 @@ export function dbInsertTxs(chainId: bigint, txs: Transaction[]) {
 }
 
 // TODO
-// export function dbInsertAddr() {}
+export function dbInsertAddr(addr: string, name: string, type: number) {}
 // export function dbGetAddr() {}
 
 export function dbSetLatestBlockNum(chainId: bigint, Num: bigint) {

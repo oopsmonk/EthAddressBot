@@ -61,7 +61,7 @@ const prepareHistory = async (event: webhook.MessageEvent, url: string) => {
 
 // Function handler to receive the text.
 const textEventHandler = async (
-  event: webhook.Event
+  event: webhook.Event,
 ): Promise<MessageAPIResponseBase | undefined> => {
   // Process all variables here.
 
@@ -124,7 +124,7 @@ const textEventHandler = async (
     config = config.concat(`Network Block Number: ${networkBlock}\n`);
     config = config.concat(`DB Block Number: ${dbBlockNum}\n`);
     config = config.concat(
-      `Block Interval: ${Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL) / 1000}s\n`
+      `Block Interval: ${Number(Bun.env.LATEST_BLOCK_WORKER_INTERVAL) / 1000}s\n`,
     );
     config = config.concat(`Explorer: ${Bun.env.TX_HASH_URL}\n`);
     config = config.concat(`Zrok share duration: ${Bun.env.ZROK_SHARE_DURATION} mins\n`);
@@ -168,11 +168,14 @@ const textEventHandler = async (
         }
       };
 
-      setTimeout(() => {
-        // Send Ctrl+C to terminate the zrok
-        killZrok("SIGINT");
-        logger(LogLevel.Info, tag, `Share terminated after ${Bun.env.ZROK_SHARE_DURATION} mins.`);
-      }, Number(Bun.env.ZROK_SHARE_DURATION) * 60 * 1000); //  in milliseconds
+      setTimeout(
+        () => {
+          // Send Ctrl+C to terminate the zrok
+          killZrok("SIGINT");
+          logger(LogLevel.Info, tag, `Share terminated after ${Bun.env.ZROK_SHARE_DURATION} mins.`);
+        },
+        Number(Bun.env.ZROK_SHARE_DURATION) * 60 * 1000,
+      ); //  in milliseconds
 
       zrokProcess.stderr.on("data", (data) => {
         // console.error(`Error: ${data}`);
@@ -310,7 +313,7 @@ export function startServer() {
               status: "error",
             });
           }
-        })
+        }),
       );
 
       // Return a successful message.
@@ -318,7 +321,7 @@ export function startServer() {
         status: "success",
         results,
       });
-    }
+    },
   );
 
   // Create a server and listen to it.
