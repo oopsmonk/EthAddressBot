@@ -1,9 +1,9 @@
 import figlet from "figlet";
-import { type AddressList, type Transaction, type Web3Transaction } from "./types";
+import { AdddresType, type AddressList, type Transaction, type Web3Transaction } from "./types";
 import Web3 from "web3";
 import { startServer, sendTxLog } from "./LineBotServer";
 import { targetList, aliasList } from "./constants";
-import { dbCreateTables, dbInsertTxs, dbSetLatestBlockNum, parsingTx } from "./utils";
+import { dbCreateTables, dbInsertAddr, dbInsertTxs, dbSetLatestBlockNum, parsingTx } from "./utils";
 import { LogLevel, logger } from "./logger";
 
 const rpc = Bun.env.RPC_PROVIDER;
@@ -197,12 +197,23 @@ async function initDBAndBlockNumber(web3: Web3): Promise<bigint> {
   return blockNum > latestBLockNum ? blockNum : latestBLockNum;
 }
 
+function dbInsertAddressList() {
+  for (const item of targetList) {
+    dbInsertAddr(item.address, item.name, AdddresType.Target);
+  }
+  for (const item of aliasList) {
+    dbInsertAddr(item.address, item.name, AdddresType.Alias);
+  }
+}
+
 if (greeding()) {
   // get network info
   const web3 = new Web3(new Web3.providers.HttpProvider(rpc));
   currChainId = await web3.eth.getChainId();
   // make sure db is create and import transactions if needed
   const initBlockNum = await initDBAndBlockNumber(web3);
+  // add address list into db
+  dbInsertAddressList();
   logger(LogLevel.Info, tag, `Network chainId: ${currChainId}`);
   logger(LogLevel.Info, tag, `Starting Block Number: ${initBlockNum}`);
 

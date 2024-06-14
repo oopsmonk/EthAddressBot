@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import type { Transaction, Web3Transaction } from "./types";
+import { AdddresType, type Transaction, type Web3Transaction } from "./types";
 import * as XLSX from "xlsx";
 import { mkdirSync, existsSync } from "fs";
 import * as path from "path";
@@ -71,9 +71,29 @@ export function dbInsertTxs(chainId: bigint, txs: Transaction[]) {
   db.close();
 }
 
-// TODO
-export function dbInsertAddr(addr: string, name: string, type: number) {}
-// export function dbGetAddr() {}
+export function dbInsertAddr(addr: string, name: string, type: AdddresType) {
+  const db = new Database(dbPath);
+  const inst = `INSERT INTO addresses (type, name, address)
+    VALUES (${type}, '${name}', '${addr}')
+    ON CONFLICT DO UPDATE SET name='${name}', type=${type};`;
+
+  // console.log(inst);
+  db.prepare(inst).run();
+  logger(
+    LogLevel.Debug,
+    tag,
+    `insert name: ${name}, type: ${type === AdddresType.Alias ? "alias" : "target"}, add: ${addr}`,
+  );
+  db.close();
+}
+
+export function dbGetAddr() {
+  const db = new Database(dbPath);
+  // update the latest block in db
+  const addrList = db.query(`SELECT * from addresses;`).all();
+  db.close();
+  return addrList;
+}
 
 export function dbSetLatestBlockNum(chainId: bigint, Num: bigint) {
   const db = new Database(dbPath);
@@ -135,6 +155,11 @@ export function tx2file(filePath: string) {
     const worksheet = XLSX.utils.json_to_sheet(rows);
     XLSX.utils.book_append_sheet(workbook, worksheet, `txs_${id}`);
   }
+
+  // add address to workbook
+  const addrList = db.query("SELECT * from addresses;").all();
+  const addrWorkseet = XLSX.utils.json_to_sheet(addrList);
+  XLSX.utils.book_append_sheet(workbook, addrWorkseet, `addresses`);
 
   // make sure dir is existing
   const dir = path.dirname(filePath);
